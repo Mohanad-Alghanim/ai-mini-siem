@@ -9,7 +9,7 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-009
+## Current scope: TASK-001 through TASK-010
 
 This repository provides the modular project skeleton, a read-only CSV inspection
 and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
@@ -17,6 +17,11 @@ prediction storage, anomaly alert generation, a read-only Streamlit dashboard,
 and synthetic automated tests. Live monitoring is not implemented. Real-data
 backend, model, and dashboard validation remain pending in the cloud. No real datasets are included.
 Wazuh is not used.
+
+The opt-in [Kali-native SSH laboratory](docs/kali-native-ssh-lab.md) uses an
+independent loopback-only OpenSSH process, disposable accounts and bounded
+scenarios. It collects private telemetry/inventory drafts without model or
+SQLite integration. Live Kali execution and security validation remain pending.
 
 ## Project structure
 
@@ -42,7 +47,8 @@ ai-mini-siem/
 │   ├── feature-pipeline-strategy.md
 │   ├── feature-contract-cli.md
 │   ├── dataset-inventory.md
-│   └── dataset-evaluation.md
+│   ├── dataset-evaluation.md
+│   └── kali-native-ssh-lab.md
 ├── mini_siem/
 │   ├── __init__.py
 │   ├── analysis.py
@@ -263,3 +269,8 @@ change SQLite, or authorize inference.
 ```bash
 python -m mini_siem.datasets --help
 ```
+
+Native lab code: `mini_siem/native_lab/{control,safety,telemetry}.py`; CLI:
+`python -m mini_siem.kali_ssh_lab --help`; synthetic tests:
+`tests/test_kali_ssh_lab.py`. Follow the [Kali guide](docs/kali-native-ssh-lab.md)
+for explicit privileged lifecycle commands and unchanged-system-service checks.
