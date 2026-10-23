@@ -1,0 +1,98 @@
+{
+  "services": {
+    "ssh-server": {
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "pids_limit": 64,
+      "mem_limit": "128m",
+      "cpus": 0.5,
+      "networks": [
+        "ssh-internal"
+      ],
+      "restart": "no",
+      "ipc": "private",
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "labels": {
+        "org.mini-siem.lab": "ssh-task-010",
+        "org.mini-siem.environment": "${COMPOSE_PROJECT_NAME:?prepare required}"
+      },
+      "build": {
+        "context": "./server"
+      },
+      "cap_add": [
+        "SETUID",
+        "SETGID",
+        "SYS_CHROOT"
+      ],
+      "tmpfs": [
+        "/run:rw,noexec,nosuid,size=16m,mode=0755",
+        "/tmp:rw,noexec,nosuid,size=8m"
+      ],
+      "volumes": [
+        "${LAB_KEYS_DIR:?prepare required}/good.pub:/lab/authorized_key:ro"
+      ],
+      "image": "mini-siem-local/ssh-server:task010"
+    },
+    "ssh-client": {
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "pids_limit": 64,
+      "mem_limit": "128m",
+      "cpus": 0.5,
+      "networks": [
+        "ssh-internal"
+      ],
+      "restart": "no",
+      "ipc": "private",
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "labels": {
+        "org.mini-siem.lab": "ssh-task-010",
+        "org.mini-siem.environment": "${COMPOSE_PROJECT_NAME:?prepare required}"
+      },
+      "build": {
+        "context": "./client",
+        "args": {
+          "LAB_UID": "${LAB_UID:?prepare required}",
+          "LAB_GID": "${LAB_GID:?prepare required}"
+        }
+      },
+      "user": "${LAB_UID:?prepare required}:${LAB_GID:?prepare required}",
+      "tmpfs": [
+        "/tmp:rw,noexec,nosuid,size=8m"
+      ],
+      "volumes": [
+        "${LAB_KEYS_DIR:?prepare required}:/lab-keys:ro"
+      ],
+      "image": "mini-siem-local/ssh-client:task010"
+    }
+  },
+  "networks": {
+    "ssh-internal": {
+      "driver": "bridge",
+      "internal": true,
+      "enable_ipv6": false
+    }
+  }
+}

@@ -9,7 +9,7 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-009
+## Current scope: TASK-001 through TASK-010
 
 This repository provides the modular project skeleton, a read-only CSV inspection
 and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
@@ -18,6 +18,10 @@ and synthetic automated tests. Live monitoring is not implemented. Real-data
 backend, model, and dashboard validation remain pending in the cloud. No real datasets are included.
 Wazuh is not used.
 
+The opt-in [controlled SSH lab](docs/ssh-security-lab.md) provides isolated
+containers, bounded scenarios and private telemetry/inventory collection. It does
+not enable model training or inference. Kali deployment validation is pending.
+
 ## Project structure
 
 ```text
@@ -25,6 +29,7 @@ ai-mini-siem/
 ├── .gitignore
 ├── README.md
 ├── requirements.txt
+├── lab/ssh/                 # Compose config and server/client image definitions
 ├── .streamlit/
 │   └── config.toml
 ├── config/
@@ -42,7 +47,8 @@ ai-mini-siem/
 │   ├── feature-pipeline-strategy.md
 │   ├── feature-contract-cli.md
 │   ├── dataset-inventory.md
-│   └── dataset-evaluation.md
+│   ├── dataset-evaluation.md
+│   └── ssh-security-lab.md
 ├── mini_siem/
 │   ├── __init__.py
 │   ├── analysis.py
@@ -263,3 +269,8 @@ change SQLite, or authorize inference.
 ```bash
 python -m mini_siem.datasets --help
 ```
+
+TASK-010 modules: `mini_siem/lab/{control,isolation,telemetry}.py`,
+`mini_siem/ssh_lab.py`; synthetic tests: `tests/test_ssh_lab.py`.
+See the [Kali lab guide](docs/ssh-security-lab.md) for exact startup, shutdown,
+collection, read-only analysis and cleanup commands.
