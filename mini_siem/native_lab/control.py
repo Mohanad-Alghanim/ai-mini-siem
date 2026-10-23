@@ -80,9 +80,17 @@ def prepare(runtime):
 def effective_config(root):
     safety.command([safety.SSHD, '-t', '-f', str(root/'sshd_config')])
     lines = safety.command([safety.SSHD, '-T', '-f', str(root/'sshd_config')]).splitlines()
-    addresses = [line.split(maxsplit=1)[1] for line in lines if line.startswith('listenaddress ')]
-    if addresses != ['127.0.0.1:2222']:
-        raise ValueError('Effective SSH listener must be IPv4 loopback only')
+    # OpenSSH versions differ in keyword capitalization. Normalize keys only;
+    # values must still match the fixed isolation policy exactly. Lists retain
+    # duplicates so repeated keys cannot silently overwrite unsafe settings.
+    expected = {'listenaddress': '127.0.0.1:2222', 'port': '2222', 'addressfamily': 'inet'}
+    settings = {key: [] for key in expected}
+    for line in lines:
+        fields = line.split(maxsplit=1)
+        if fields and fields[0].lower() in settings:
+            settings[fields[0].lower()].append(fields[1].strip() if len(fields) == 2 else '')
+    if any(settings[key] != [value] for key, value in expected.items()):
+        raise ValueError('Effective SSH configuration must contain exactly one fixed loopback listener, port and IPv4 family')
 
 
 def child_limits():

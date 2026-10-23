@@ -308,3 +308,45 @@ def test_preparation_only_creates_disposable_owned_environment(tmp_path):
     assert (root/'good').stat().st_mode & 0o777 == 0o600
     assert (root/'home').stat().st_mode & 0o777 == 0o755
     assert 'ListenAddress 127.0.0.1' in (root/'sshd_config').read_text()
+
+
+KALI_EFFECTIVE_CONFIG = """Port 2222
+AddressFamily inet
+ListenAddress 127.0.0.1:2222
+GatewayPorts no
+"""
+
+
+@pytest.mark.parametrize('output', [
+    KALI_EFFECTIVE_CONFIG,
+    KALI_EFFECTIVE_CONFIG.lower(),
+    '  pOrT\t2222\nAdDrEsSfAmIlY inet\nLiStEnAdDrEsS 127.0.0.1:2222\n',
+])
+def test_effective_config_accepts_kali_keyword_case(state, output):
+    root, _, _ = state
+    with patch('mini_siem.native_lab.safety.command', side_effect=['', output]) as command:
+        control.effective_config(root)
+    assert command.call_args_list[0].args[0][1] == '-t'
+    assert command.call_args_list[1].args[0][1] == '-T'
+
+
+@pytest.mark.parametrize('output', [
+    KALI_EFFECTIVE_CONFIG.replace('127.0.0.1:2222', unsafe)
+    for unsafe in ('0.0.0.0:2222', '*:2222', '[::]:2222', '[::1]:2222',
+                   '192.0.2.1:2222', '127.0.0.1:22', '127.0.0.1')
+] + [
+    KALI_EFFECTIVE_CONFIG + 'listenaddress 127.0.0.1:2222\n',
+    KALI_EFFECTIVE_CONFIG + 'ListenAddress 0.0.0.0:2222\n',
+    KALI_EFFECTIVE_CONFIG.replace('Port 2222', 'Port 22'),
+    KALI_EFFECTIVE_CONFIG.replace('AddressFamily inet', 'AddressFamily any'),
+    KALI_EFFECTIVE_CONFIG.replace('AddressFamily inet', 'AddressFamily inet6'),
+] + [
+    KALI_EFFECTIVE_CONFIG.replace(line, replacement)
+    for line in ('Port 2222\n', 'AddressFamily inet\n', 'ListenAddress 127.0.0.1:2222\n')
+    for replacement in ('', line.split()[0]+'\n', line+line.lower())
+])
+def test_effective_config_rejects_unsafe_missing_or_duplicate_settings(state, output):
+    root, _, _ = state
+    with patch('mini_siem.native_lab.safety.command', side_effect=['', output]):
+        with pytest.raises(ValueError):
+            control.effective_config(root)
