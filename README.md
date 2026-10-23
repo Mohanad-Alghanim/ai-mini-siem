@@ -9,13 +9,14 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-003
+## Current scope: TASK-001 through TASK-004
 
 This repository provides the modular project skeleton, a read-only CSV inspection
-and validation pipeline, an initial Isolation Forest anomaly engine, and automated
-tests using synthetic fixtures. Alert management, storage operations, and the
-dashboard are not implemented. Real-data model validation remains pending in the
-cloud. No real datasets are included. Wazuh is not used.
+and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
+prediction storage, anomaly alert generation, and synthetic automated tests.
+The dashboard and live monitoring are not implemented. Real-data backend and
+model validation remain pending in the cloud. No real datasets are included.
+Wazuh is not used.
 
 ## Project structure
 
@@ -28,13 +29,16 @@ ai-mini-siem/
 │   └── dataset_schema.example.json
 ├── docs/
 │   ├── dataset-analysis.md
-│   └── ssh-anomaly-model.md
+│   ├── ssh-anomaly-model.md
+│   └── siem-backend.md
 ├── mini_siem/
 │   ├── __init__.py
 │   ├── analysis.py
+│   ├── backend.py
 │   ├── ingestion/
 │   │   ├── __init__.py
-│   │   └── csv_loader.py
+│   │   ├── csv_loader.py
+│   │   └── ssh_backend.py
 │   ├── preprocessing/
 │   │   ├── __init__.py
 │   │   ├── validation.py
@@ -45,19 +49,22 @@ ai-mini-siem/
 │   │   ├── features.py
 │   │   └── model.py
 │   ├── alerts/
-│   │   └── __init__.py
+│   │   ├── __init__.py
+│   │   └── management.py
 │   ├── storage/
-│   │   └── __init__.py
+│   │   ├── __init__.py
+│   │   └── sqlite.py
 │   └── dashboard/
 │       └── __init__.py
 └── tests/
     ├── test_smoke.py
     ├── test_dataset_analysis.py
-    └── test_ssh_model.py
+    ├── test_ssh_model.py
+    └── test_backend.py
 ```
 
-Each component is an importable package. CSV analysis and model CLIs are available;
-there are no running services or SIEM/dashboard entry points yet.
+Each component is an importable package. Analysis, model, and backend CLIs are
+available; no running service or dashboard is included.
 
 ## Kali Linux installation
 
@@ -77,8 +84,8 @@ Python.
 ```bash
 git clone https://github.com/Mohanad-Alghanim/ai-mini-siem.git
 cd ai-mini-siem
-# Before TASK-003 is merged, select its review branch:
-git switch task-003-ssh-anomaly-model
+# Before TASK-004 is merged, select its review branch:
+git switch task-004-siem-backend
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -102,7 +109,7 @@ The smoke suite checks all six component imports, required third-party and
 SQLite imports, and essential project files. Dataset and model tests exercise
 inspection and prediction with synthetic records. These checks do not validate
 real-world detection accuracy.
-There is no dashboard or SIEM run command; those entry points belong to later tasks.
+The backend CLI is documented below; dashboard and live monitoring belong to later tasks.
 
 Virtual environments, local SQLite databases, model artifacts, secrets, and
 temporary files are excluded from Git. Never commit credentials or real security
@@ -138,3 +145,15 @@ python -m mini_siem.ml --help
 
 Real-data model validation remains pending in the cloud. Existing predictions
 are not ground truth; unusual behavior is not proof of an attack.
+
+## SQLite backend and AI alerts (TASK-004)
+
+The backend stores feature ingestion batches and AI predictions transactionally,
+creates alerts only for anomalies, and preserves history on duplicate retries.
+It uses an existing trusted model without retraining. See
+[backend instructions](docs/siem-backend.md) for schema, batch/model identities,
+UTC timestamp semantics, exact Kali commands, and limitations.
+
+```bash
+python -m mini_siem.backend --help
+```
