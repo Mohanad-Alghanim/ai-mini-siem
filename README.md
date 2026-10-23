@@ -9,7 +9,7 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-007
+## Current scope: TASK-001 through TASK-008
 
 This repository provides the modular project skeleton, a read-only CSV inspection
 and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
@@ -28,20 +28,25 @@ ai-mini-siem/
 ├── .streamlit/
 │   └── config.toml
 ├── config/
-│   └── dataset_schema.example.json
+│   ├── dataset_schema.example.json
+│   └── ssh_feature_contract.json
 ├── docs/
 │   ├── dataset-analysis.md
 │   ├── ssh-anomaly-model.md
 │   ├── siem-backend.md
 │   ├── dashboard.md
 │   ├── ssh-log-ingestion.md
-│   └── feature-compatibility.md
+│   ├── feature-compatibility.md
+│   ├── feature-provenance-audit.md
+│   ├── feature-pipeline-strategy.md
+│   └── feature-contract-cli.md
 ├── mini_siem/
 │   ├── __init__.py
 │   ├── analysis.py
 │   ├── backend.py
 │   ├── ssh_logs.py
 │   ├── feature_compatibility.py
+│   ├── feature_contract.py
 │   ├── ingestion/
 │   │   ├── __init__.py
 │   │   ├── csv_loader.py
@@ -77,7 +82,8 @@ ai-mini-siem/
     ├── test_backend.py
     ├── test_dashboard.py
     ├── test_ssh_logs.py
-    └── test_feature_compatibility.py
+    ├── test_feature_compatibility.py
+    └── test_feature_contract.py
 ```
 
 Each component is an importable package. Analysis, model, and backend CLIs are
@@ -101,8 +107,8 @@ Python.
 ```bash
 git clone https://github.com/Mohanad-Alghanim/ai-mini-siem.git
 cd ai-mini-siem
-# Before TASK-007 is merged, select its review branch:
-git switch task-007-feature-compatibility
+# Before TASK-008 is merged, select its review branch:
+git switch task-008-feature-pipeline-strategy
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -217,4 +223,20 @@ report interpretation, scientific limitations and safe future strategies.
 
 ```bash
 python -m mini_siem.feature_compatibility --help
+```
+
+
+## Feature contract and future model strategy (TASK-008)
+
+The [provenance audit](docs/feature-provenance-audit.md) identifies missing legacy
+baseline-generation evidence. The [versioned contract](config/ssh_feature_contract.json)
+records existing feature rules without changing them. The
+[strategy and consistency design](docs/feature-pipeline-strategy.md) recommends a
+separately reviewed reproducible experimental pipeline if legacy compatibility
+cannot be established; it does not authorize training. The
+[read-only CLI](docs/feature-contract-cli.md) checks contract/runtime drift and can
+inspect local input hashes. A valid contract never enables inference or training.
+
+```bash
+python -m mini_siem.feature_contract
 ```
