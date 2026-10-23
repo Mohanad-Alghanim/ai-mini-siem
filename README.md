@@ -9,7 +9,7 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-006
+## Current scope: TASK-001 through TASK-007
 
 This repository provides the modular project skeleton, a read-only CSV inspection
 and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
@@ -34,12 +34,14 @@ ai-mini-siem/
 │   ├── ssh-anomaly-model.md
 │   ├── siem-backend.md
 │   ├── dashboard.md
-│   └── ssh-log-ingestion.md
+│   ├── ssh-log-ingestion.md
+│   └── feature-compatibility.md
 ├── mini_siem/
 │   ├── __init__.py
 │   ├── analysis.py
 │   ├── backend.py
 │   ├── ssh_logs.py
+│   ├── feature_compatibility.py
 │   ├── ingestion/
 │   │   ├── __init__.py
 │   │   ├── csv_loader.py
@@ -49,7 +51,8 @@ ai-mini-siem/
 │   │   ├── __init__.py
 │   │   ├── validation.py
 │   │   ├── relationships.py
-│   │   └── ssh_features.py
+│   │   ├── ssh_features.py
+│   │   └── compatibility.py
 │   ├── ml/
 │   │   ├── __init__.py
 │   │   ├── __main__.py
@@ -73,7 +76,8 @@ ai-mini-siem/
     ├── test_ssh_model.py
     ├── test_backend.py
     ├── test_dashboard.py
-    └── test_ssh_logs.py
+    ├── test_ssh_logs.py
+    └── test_feature_compatibility.py
 ```
 
 Each component is an importable package. Analysis, model, and backend CLIs are
@@ -97,8 +101,8 @@ Python.
 ```bash
 git clone https://github.com/Mohanad-Alghanim/ai-mini-siem.git
 cd ai-mini-siem
-# Before TASK-006 is merged, select its review branch:
-git switch task-006-ssh-log-ingestion
+# Before TASK-007 is merged, select its review branch:
+git switch task-007-feature-compatibility
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -199,4 +203,18 @@ for formulas, parser scope, storage proposal, privacy rules, and Kali commands.
 
 ```bash
 python -m mini_siem.ssh_logs --help
+```
+
+
+## Feature compatibility investigation (TASK-007)
+
+A read-only diagnostic traces per-IP feature differences to event references,
+separates confirmed observations from hypotheses, and keeps model inference
+blocked while original baseline semantics remain unverified. It changes no
+parser, feature definition, model or database behavior. See
+[compatibility investigation](docs/feature-compatibility.md) for Kali commands,
+report interpretation, scientific limitations and safe future strategies.
+
+```bash
+python -m mini_siem.feature_compatibility --help
 ```
