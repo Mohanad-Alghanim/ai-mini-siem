@@ -9,7 +9,7 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-005
+## Current scope: TASK-001 through TASK-006
 
 This repository provides the modular project skeleton, a read-only CSV inspection
 and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
@@ -33,19 +33,23 @@ ai-mini-siem/
 │   ├── dataset-analysis.md
 │   ├── ssh-anomaly-model.md
 │   ├── siem-backend.md
-│   └── dashboard.md
+│   ├── dashboard.md
+│   └── ssh-log-ingestion.md
 ├── mini_siem/
 │   ├── __init__.py
 │   ├── analysis.py
 │   ├── backend.py
+│   ├── ssh_logs.py
 │   ├── ingestion/
 │   │   ├── __init__.py
 │   │   ├── csv_loader.py
-│   │   └── ssh_backend.py
+│   │   ├── ssh_backend.py
+│   │   └── ssh_events.py
 │   ├── preprocessing/
 │   │   ├── __init__.py
 │   │   ├── validation.py
-│   │   └── relationships.py
+│   │   ├── relationships.py
+│   │   └── ssh_features.py
 │   ├── ml/
 │   │   ├── __init__.py
 │   │   ├── __main__.py
@@ -56,7 +60,8 @@ ai-mini-siem/
 │   │   └── management.py
 │   ├── storage/
 │   │   ├── __init__.py
-│   │   └── sqlite.py
+│   │   ├── sqlite.py
+│   │   └── ssh_events.py
 │   └── dashboard/
 │       ├── __init__.py
 │       ├── app.py
@@ -67,7 +72,8 @@ ai-mini-siem/
     ├── test_dataset_analysis.py
     ├── test_ssh_model.py
     ├── test_backend.py
-    └── test_dashboard.py
+    ├── test_dashboard.py
+    └── test_ssh_logs.py
 ```
 
 Each component is an importable package. Analysis, model, and backend CLIs are
@@ -91,8 +97,8 @@ Python.
 ```bash
 git clone https://github.com/Mohanad-Alghanim/ai-mini-siem.git
 cd ai-mini-siem
-# Before TASK-005 is merged, select its review branch:
-git switch task-005-streamlit-dashboard
+# Before TASK-006 is merged, select its review branch:
+git switch task-006-ssh-log-ingestion
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -180,3 +186,17 @@ MINI_SIEM_DATABASE="$PWD/data/mini-siem.db" \
 ```
 
 Use locally only; public exposure requires authentication and additional security.
+
+
+## Historical SSH events and feature review (TASK-006)
+
+Parse the structured historical CSV, export observed IP-level features, compare
+an optional baseline, and persist every validated event including rows without
+IPs. Generated features are **not automatically sent to the model**; compatibility
+requires independent semantic review. Raw-content preservation uses an explicit,
+optional additive storage extension. See [SSH ingestion instructions](docs/ssh-log-ingestion.md)
+for formulas, parser scope, storage proposal, privacy rules, and Kali commands.
+
+```bash
+python -m mini_siem.ssh_logs --help
+```
