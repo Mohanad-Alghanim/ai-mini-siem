@@ -4,3 +4,5 @@ scikit-learn>=1.5,<2
 streamlit>=1.40,<2
 plotly>=5.24,<7
 pytest>=8.3,<10
+# Explicit dependency for local model persistence.
+joblib>=1.4,<2
