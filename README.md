@@ -9,7 +9,7 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-008
+## Current scope: TASK-001 through TASK-009
 
 This repository provides the modular project skeleton, a read-only CSV inspection
 and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
@@ -29,7 +29,8 @@ ai-mini-siem/
 │   └── config.toml
 ├── config/
 │   ├── dataset_schema.example.json
-│   └── ssh_feature_contract.json
+│   ├── ssh_feature_contract.json
+│   └── dataset_inventory.schema.json
 ├── docs/
 │   ├── dataset-analysis.md
 │   ├── ssh-anomaly-model.md
@@ -39,7 +40,9 @@ ai-mini-siem/
 │   ├── feature-compatibility.md
 │   ├── feature-provenance-audit.md
 │   ├── feature-pipeline-strategy.md
-│   └── feature-contract-cli.md
+│   ├── feature-contract-cli.md
+│   ├── dataset-inventory.md
+│   └── dataset-evaluation.md
 ├── mini_siem/
 │   ├── __init__.py
 │   ├── analysis.py
@@ -47,6 +50,11 @@ ai-mini-siem/
 │   ├── ssh_logs.py
 │   ├── feature_compatibility.py
 │   ├── feature_contract.py
+│   ├── datasets.py
+│   ├── evaluation/
+│   │   ├── __init__.py
+│   │   ├── inventory.py
+│   │   └── splits.py
 │   ├── ingestion/
 │   │   ├── __init__.py
 │   │   ├── csv_loader.py
@@ -83,7 +91,8 @@ ai-mini-siem/
     ├── test_dashboard.py
     ├── test_ssh_logs.py
     ├── test_feature_compatibility.py
-    └── test_feature_contract.py
+    ├── test_feature_contract.py
+    └── test_dataset_evaluation.py
 ```
 
 Each component is an importable package. Analysis, model, and backend CLIs are
@@ -107,8 +116,8 @@ Python.
 ```bash
 git clone https://github.com/Mohanad-Alghanim/ai-mini-siem.git
 cd ai-mini-siem
-# Before TASK-008 is merged, select its review branch:
-git switch task-008-feature-pipeline-strategy
+# Before TASK-009 is merged, select its review branch:
+git switch task-009-dataset-evaluation
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -239,4 +248,18 @@ inspect local input hashes. A valid contract never enables inference or training
 
 ```bash
 python -m mini_siem.feature_contract
+```
+
+
+## Dataset inventory and evaluation planning (TASK-009)
+
+The [inventory guide](docs/dataset-inventory.md) documents private metadata
+registration, read-only quality checks and current SSH vs future source categories.
+The [evaluation methodology](docs/dataset-evaluation.md) covers conservative
+independent-group splits, trusted temporal requirements, and separate unlabeled
+and independently labeled evaluation. Plans do not train models, execute attacks,
+change SQLite, or authorize inference.
+
+```bash
+python -m mini_siem.datasets --help
 ```

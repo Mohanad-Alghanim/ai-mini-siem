@@ -1,0 +1,503 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mini SIEM dataset inventory v1",
+  "type": "object",
+  "properties": {
+    "inventory_schema_version": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "dataset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataset_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "ssh_authentication",
+        "network_flow",
+        "http_access_application",
+        "file_integrity",
+        "http_server_metrics_requests"
+      ]
+    },
+    "acquisition_method": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "collection_environment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "record_unit": {
+      "type": "string",
+      "enum": [
+        "raw_event",
+        "aggregate",
+        "unknown"
+      ]
+    },
+    "file": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": [
+            "csv",
+            "jsonl",
+            "other"
+          ]
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "record_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "required": [
+        "format",
+        "sha256",
+        "record_count"
+      ],
+      "additionalProperties": false
+    },
+    "schema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "parser_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "record_id_field": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "required_columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "label_field": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "column_rules": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": [
+              "field",
+              "type",
+              "nullable",
+              "min",
+              "max"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "integer",
+                  "number",
+                  "ip"
+                ]
+              },
+              "nullable": {
+                "type": "boolean"
+              },
+              "min": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "max": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "id",
+        "parser_version",
+        "record_id_field",
+        "required_columns",
+        "label_field",
+        "column_rules"
+      ],
+      "additionalProperties": false
+    },
+    "timestamps": {
+      "type": "object",
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "unknown",
+            "partial_or_ambiguous",
+            "independently_verified"
+          ]
+        },
+        "evidence_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "fields",
+        "confidence",
+        "evidence_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "observation": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "end": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "duration_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "unknown",
+            "independently_verified"
+          ]
+        },
+        "evidence_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "duration_seconds",
+        "confidence",
+        "evidence_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "aggregation": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "window": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "exposure": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      },
+      "required": [
+        "scope",
+        "window",
+        "exposure"
+      ],
+      "additionalProperties": false
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "none",
+            "unknown",
+            "ai_predictions",
+            "independent_review",
+            "controlled_experiment_record"
+          ]
+        },
+        "reliability": {
+          "type": "string",
+          "enum": [
+            "not_available",
+            "unverified",
+            "independently_verified"
+          ]
+        },
+        "evidence_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "available",
+        "source",
+        "reliability",
+        "evidence_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "privacy": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "sensitive",
+        "restricted",
+        "unknown"
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "acquisition_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "collection_group": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "dependence_groups": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "lineage_root_sha256": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "uniqueItems": true
+        },
+        "evidence_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "acquisition_id",
+        "collection_group",
+        "dependence_groups",
+        "lineage_root_sha256",
+        "evidence_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "event_membership": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "identity_namespace": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "event_identity_sha256": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "uniqueItems": true
+        },
+        "evidence_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "complete",
+        "identity_namespace",
+        "event_identity_sha256",
+        "evidence_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "quality_notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "quality_review": {
+      "type": "object",
+      "required": [
+        "status",
+        "evidence_sha256",
+        "unresolved_findings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "independently_reviewed"
+          ]
+        },
+        "evidence_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "unresolved_findings": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "inventory_schema_version",
+    "dataset_id",
+    "dataset_version",
+    "source_type",
+    "acquisition_method",
+    "collection_environment",
+    "record_unit",
+    "file",
+    "schema",
+    "timestamps",
+    "observation",
+    "aggregation",
+    "labels",
+    "privacy",
+    "provenance",
+    "event_membership",
+    "quality_notes",
+    "quality_review"
+  ],
+  "additionalProperties": false
+}
