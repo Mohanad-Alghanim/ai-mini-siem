@@ -242,3 +242,9 @@ secrets/
 *~
 tmp/
 temp/
+
+# SSH dataset analysis: real and derived datasets / potentially sensitive reports
+*.csv
+*.csv.*
+data/
+reports/

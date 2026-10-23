@@ -1,0 +1,52 @@
+{
+  "datasets": {
+    "events": {
+      "required": [],
+      "columns": {},
+      "complete": false
+    },
+    "baseline": {
+      "required": [
+        "SourceIP"
+      ],
+      "columns": {
+        "SourceIP": {
+          "type": "ip"
+        }
+      },
+      "complete": false
+    },
+    "isolation": {
+      "required": [
+        "SourceIP",
+        "AnomalyLabel",
+        "AnomalyScore"
+      ],
+      "columns": {
+        "SourceIP": {
+          "type": "ip"
+        },
+        "AnomalyLabel": {
+          "type": "integer"
+        },
+        "AnomalyScore": {
+          "type": "number"
+        }
+      },
+      "complete": false
+    },
+    "risk": {
+      "required": [
+        "SourceIP",
+        "RiskLevel"
+      ],
+      "columns": {
+        "SourceIP": {
+          "type": "ip"
+        }
+      },
+      "complete": false
+    }
+  },
+  "prediction_policy": {}
+}
