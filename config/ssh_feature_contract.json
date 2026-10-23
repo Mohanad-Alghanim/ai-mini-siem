@@ -1,0 +1,171 @@
+{
+  "contract_id": "ssh-observed-peer-contract-v1",
+  "contract_schema_version": 1,
+  "status": "reviewable_specification_not_model_authorization",
+  "parser_version": "ssh-historical-v2",
+  "feature_semantics_version": "ssh-observed-peer-features-v1",
+  "implementation": {
+    "audited_base_commit": "43e71517ed88994d5d2eeca2bac2c646caecaca3",
+    "extractor": [
+      "mini_siem.ingestion.ssh_events.load_events",
+      "mini_siem.preprocessing.ssh_features.aggregate_features"
+    ],
+    "source_sha256": {
+      "mini_siem/ingestion/csv_loader.py": "ef026c615984ccefc12c07c6f044366100831b22dc44f0875652f992e6088a12",
+      "mini_siem/ingestion/ssh_events.py": "6d2b2537e25cff5974a4cc567d0b5117592876ed8d9e553816c7399f6e5c7991",
+      "mini_siem/preprocessing/ssh_features.py": "923d38308599becef2a022b6e43b21836e06efc42c9a9cd23b75761c5f6728f8",
+      "mini_siem/preprocessing/validation.py": "2f8e3df2862b54a798b1a2f3f3386af175accefeac31372b8f6fa6dd2dbe2445",
+      "mini_siem/ml/features.py": "f02c8e39db566c99ba8a6821875f33a98a571b12bf1fc7848b5f989d401b2b9f",
+      "mini_siem/ml/model.py": "cb8b695c420ed2d4fd84fa2506e4353321b7d2e8913fa852d98425c1192a2fdb"
+    }
+  },
+  "input": {
+    "format": "UTF-8 comma-separated CSV with optional BOM; strict rectangular records and unique named headers",
+    "required_columns": [
+      "LineId",
+      "Date",
+      "Day",
+      "Time",
+      "Component",
+      "Pid",
+      "Content",
+      "EventId",
+      "EventTemplate"
+    ],
+    "extra_columns": "preserved in original local records; not features",
+    "required_values": {
+      "LineId": "positive integral digit string; repeated IDs retained",
+      "Content": "nonblank",
+      "EventId_or_EventTemplate": "at least one nonblank"
+    },
+    "timestamp_policy": "Date/Day/Time preserved as strings; no year, timezone, full timestamp or window inferred"
+  },
+  "source_ip": {
+    "identifier_only": true,
+    "canonicalization": "Python ipaddress.ip_address; string canonical form",
+    "peer_regex": "(?P<context>\\bfrom\\s+|\\brhost=|\\bclosed by\\s+)(?P<token>\\S+)",
+    "regex_flags": [
+      "IGNORECASE"
+    ],
+    "attribution": "exactly one distinct valid peer and no invalid supported-context token",
+    "ipv4_separator": "validate original token first; only from context permits strict dotted IPv4 plus exactly one terminal colon, removed once before strict validation",
+    "ipv6": "validate original full token; never strip meaningful colons or repair invalid syntax",
+    "missing_or_ambiguous": "retain original event; exclude from IP feature vectors; never assign candidate addresses or zero-fill baseline IPs"
+  },
+  "aggregation": {
+    "scope": "one supplied historical file, grouped by canonical SourceIP",
+    "window": null,
+    "window_assumptions": "no fixed duration; no cross-file comparability guarantee for count/exposure features",
+    "deduplication": "none; each CSV data-record position counts once, including repeated messages and LineIds",
+    "output_row_order": "lexicographic canonical SourceIP",
+    "empty_supported_set": "zero feature rows with all output headers; not an inference-ready dataset"
+  },
+  "event_type": {
+    "definition": "id: + original EventId if nonblank; otherwise template: + original EventTemplate",
+    "normalization": "blank checks use strip; nonblank original value is not stripped or rewritten"
+  },
+  "authentication": {
+    "failure_regex": "^Failed (?:password|publickey|keyboard-interactive|none|hostbased)\\b|\\bauthentication failure\\b",
+    "invalid_user_regex": "\\binvalid user\\b",
+    "accepted_regex": "^Accepted (?:password|publickey|keyboard-interactive|none|hostbased)\\b",
+    "regex_flags": [
+      "IGNORECASE"
+    ],
+    "counting": "boolean indicator per row, at most one contribution to each count",
+    "overlap": "failure and invalid-user counts are independent; both increment on overlap",
+    "accepted_failure_ambiguity": "retain both flags, report ambiguity, still count failure once",
+    "accepted_is_feature": false,
+    "ground_truth": false
+  },
+  "features": [
+    {
+      "name": "EventCount",
+      "type": "integer",
+      "min": 0,
+      "formula": "number of assigned rows for SourceIP"
+    },
+    {
+      "name": "UniqueEventTypes",
+      "type": "integer",
+      "min": 0,
+      "formula": "distinct derived event-type strings among assigned rows"
+    },
+    {
+      "name": "FailedAuthCount",
+      "type": "integer",
+      "min": 0,
+      "formula": "sum of failure indicators among assigned rows"
+    },
+    {
+      "name": "InvalidUserCount",
+      "type": "integer",
+      "min": 0,
+      "formula": "sum of invalid-user indicators among assigned rows"
+    },
+    {
+      "name": "FailedAuthRate",
+      "type": "number",
+      "min": 0,
+      "max": 1,
+      "formula": "FailedAuthCount / EventCount; generated groups always have EventCount > 0"
+    }
+  ],
+  "feature_order": [
+    "EventCount",
+    "UniqueEventTypes",
+    "FailedAuthCount",
+    "InvalidUserCount",
+    "FailedAuthRate"
+  ],
+  "preprocessing": {
+    "validation": "reuse prepare_features; reject missing/blank/nonfinite/nonnumeric values, fractional/negative counts, rates outside [0,1], invalid IPs and float32 overflow",
+    "identifier": "SourceIP retained for identification only",
+    "numeric_dtype": "float64; forest internally float32",
+    "selection": "persisted ColumnTransformer whitelist in feature_order, remainder=drop",
+    "scaling": "none",
+    "imputation": "none",
+    "fit_scope": "training data only; inference never refits",
+    "excluded_inputs": [
+      "SourceIP",
+      "AnomalyLabel",
+      "AnomalyStatus",
+      "AnomalyScore",
+      "RiskScore",
+      "RiskLevel"
+    ]
+  },
+  "provenance": {
+    "public_contract_contains_private_input_hashes": false,
+    "required_local_run_fields": [
+      "contract_sha256",
+      "source_event_sha256",
+      "generated_features_sha256",
+      "parser_version",
+      "feature_semantics_version",
+      "extractor_source_sha256",
+      "code_commit",
+      "dependency_versions",
+      "aggregation_scope",
+      "record_membership_manifest_sha256"
+    ],
+    "input_hash_policy": "SHA-256 exact input bytes in a private local run manifest; no invented or placeholder real-data hashes",
+    "legacy_baseline_generation": "unverified; not reconstructed from mismatches or previous model predictions"
+  },
+  "compatibility_requirements": [
+    "exact contract identity and canonical digest",
+    "parser and feature versions",
+    "ordered feature schema/types/counting/attribution/window/preprocessing",
+    "reviewed implementation hashes and dependency versions",
+    "verified training input hashes and membership provenance",
+    "approved independent evaluation and Project Manager authorization"
+  ],
+  "legacy_model": {
+    "compatibility": "not_demonstrated",
+    "inference_allowed_for_event_features": false
+  },
+  "task_008": {
+    "training_allowed": false,
+    "inference_allowed": false,
+    "deployment_allowed": false
+  }
+}
