@@ -9,12 +9,13 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001
+## Current scope: TASK-001 and TASK-002
 
-This repository currently provides the project skeleton and import/structure
-smoke tests only. Ingestion, preprocessing, anomaly detection, alert management,
-storage operations, and the dashboard are not implemented. No dataset schema or
-sample datasets are included. Wazuh is not used.
+This repository provides the modular project skeleton, a read-only CSV inspection
+and validation pipeline, and automated tests using synthetic fixtures. Anomaly
+detection, alert management, storage operations, and the dashboard are not
+implemented. Real dataset schemas and prediction conventions still need to be
+confirmed locally. No real datasets are included. Wazuh is not used.
 
 ## Project structure
 
@@ -23,12 +24,20 @@ ai-mini-siem/
 ├── .gitignore
 ├── README.md
 ├── requirements.txt
+├── config/
+│   └── dataset_schema.example.json
+├── docs/
+│   └── dataset-analysis.md
 ├── mini_siem/
 │   ├── __init__.py
+│   ├── analysis.py
 │   ├── ingestion/
-│   │   └── __init__.py
+│   │   ├── __init__.py
+│   │   └── csv_loader.py
 │   ├── preprocessing/
-│   │   └── __init__.py
+│   │   ├── __init__.py
+│   │   ├── validation.py
+│   │   └── relationships.py
 │   ├── ml/
 │   │   └── __init__.py
 │   ├── alerts/
@@ -38,11 +47,12 @@ ai-mini-siem/
 │   └── dashboard/
 │       └── __init__.py
 └── tests/
-    └── test_smoke.py
+    ├── test_smoke.py
+    └── test_dataset_analysis.py
 ```
 
-Each component is an importable package reserved for its corresponding future
-task. There are no running services or application entry points yet.
+Each component is an importable package. The CSV analysis CLI is available;
+there are no running services or SIEM/dashboard entry points yet.
 
 ## Kali Linux installation
 
@@ -62,8 +72,8 @@ Python.
 ```bash
 git clone https://github.com/Mohanad-Alghanim/ai-mini-siem.git
 cd ai-mini-siem
-# Before this task is merged, select its review branch:
-git switch task-001-project-setup
+# Before TASK-002 is merged, select its review branch:
+git switch task-002-dataset-analysis
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -84,10 +94,26 @@ python -c "import mini_siem; import mini_siem.ingestion, mini_siem.preprocessing
 ```
 
 The smoke suite checks all six component imports, required third-party and
-SQLite imports, and essential project files. These checks validate initialization,
-not detection accuracy or application behavior. There is no dashboard or SIEM
-run command in TASK-001; application entry points will be added in later tasks.
+SQLite imports, and essential project files. Dataset tests exercise the inspection
+pipeline with synthetic records. These checks do not validate detection accuracy.
+There is no dashboard or SIEM run command; those entry points belong to later tasks.
 
 Virtual environments, local SQLite databases, model artifacts, secrets, and
 temporary files are excluded from Git. Never commit credentials or real security
 logs. Use `deactivate` to leave the virtual environment.
+
+## SSH dataset inspection (TASK-002)
+
+The reusable read-only CSV pipeline now supports schema validation, aggregate
+quality findings, authentication indicators, IP relationships, and explicitly
+configured prediction/risk consistency checks. Real-data validation remains
+pending; tests use synthetic fixtures only. No model training or dashboard has
+been added.
+
+See [dataset analysis instructions](docs/dataset-analysis.md) for exact Kali Linux
+commands, configurable paths, schema/policy configuration, exit codes, and data
+quality limitations. Start with:
+
+```bash
+python -m mini_siem.analysis --data-dir "$HOME/siem-private/ssh" --output-dir reports/ssh
+```
