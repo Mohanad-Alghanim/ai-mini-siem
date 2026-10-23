@@ -218,3 +218,27 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Mini SIEM local data, model artifacts, secrets, and temporary files
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.pkl
+*.pickle
+*.joblib
+models/
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+tmp/
+temp/
