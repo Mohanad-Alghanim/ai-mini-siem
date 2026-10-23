@@ -9,13 +9,13 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-004
+## Current scope: TASK-001 through TASK-005
 
 This repository provides the modular project skeleton, a read-only CSV inspection
 and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
-prediction storage, anomaly alert generation, and synthetic automated tests.
-The dashboard and live monitoring are not implemented. Real-data backend and
-model validation remain pending in the cloud. No real datasets are included.
+prediction storage, anomaly alert generation, a read-only Streamlit dashboard,
+and synthetic automated tests. Live monitoring is not implemented. Real-data
+backend, model, and dashboard validation remain pending in the cloud. No real datasets are included.
 Wazuh is not used.
 
 ## Project structure
@@ -25,12 +25,15 @@ ai-mini-siem/
 ├── .gitignore
 ├── README.md
 ├── requirements.txt
+├── .streamlit/
+│   └── config.toml
 ├── config/
 │   └── dataset_schema.example.json
 ├── docs/
 │   ├── dataset-analysis.md
 │   ├── ssh-anomaly-model.md
-│   └── siem-backend.md
+│   ├── siem-backend.md
+│   └── dashboard.md
 ├── mini_siem/
 │   ├── __init__.py
 │   ├── analysis.py
@@ -55,16 +58,20 @@ ai-mini-siem/
 │   │   ├── __init__.py
 │   │   └── sqlite.py
 │   └── dashboard/
-│       └── __init__.py
+│       ├── __init__.py
+│       ├── app.py
+│       ├── charts.py
+│       └── queries.py
 └── tests/
     ├── test_smoke.py
     ├── test_dataset_analysis.py
     ├── test_ssh_model.py
-    └── test_backend.py
+    ├── test_backend.py
+    └── test_dashboard.py
 ```
 
 Each component is an importable package. Analysis, model, and backend CLIs are
-available; no running service or dashboard is included.
+available. The Streamlit dashboard is launched separately as described below.
 
 ## Kali Linux installation
 
@@ -84,8 +91,8 @@ Python.
 ```bash
 git clone https://github.com/Mohanad-Alghanim/ai-mini-siem.git
 cd ai-mini-siem
-# Before TASK-004 is merged, select its review branch:
-git switch task-004-siem-backend
+# Before TASK-005 is merged, select its review branch:
+git switch task-005-streamlit-dashboard
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
@@ -109,7 +116,7 @@ The smoke suite checks all six component imports, required third-party and
 SQLite imports, and essential project files. Dataset and model tests exercise
 inspection and prediction with synthetic records. These checks do not validate
 real-world detection accuracy.
-The backend CLI is documented below; dashboard and live monitoring belong to later tasks.
+Backend and dashboard commands are documented below. Live monitoring is outside the current scope.
 
 Virtual environments, local SQLite databases, model artifacts, secrets, and
 temporary files are excluded from Git. Never commit credentials or real security
@@ -121,7 +128,7 @@ The reusable read-only CSV pipeline now supports schema validation, aggregate
 quality findings, authentication indicators, IP relationships, and explicitly
 configured prediction/risk consistency checks. Real-data validation remains
 pending; dataset tests use synthetic fixtures only. TASK-003 separately adds the
-initial model described below. No dashboard has been added.
+initial model described below; TASK-005 adds the read-only dashboard.
 
 See [dataset analysis instructions](docs/dataset-analysis.md) for exact Kali Linux
 commands, configurable paths, schema/policy configuration, exit codes, and data
@@ -157,3 +164,19 @@ UTC timestamp semantics, exact Kali commands, and limitations.
 ```bash
 python -m mini_siem.backend --help
 ```
+
+
+## Streamlit dashboard (TASK-005)
+
+The local dashboard reads the existing database without writes, showing global
+KPIs and Plotly charts plus filterable alert/prediction tables. It does not
+retrain models or generate demo data. See [dashboard instructions](docs/dashboard.md)
+for launch commands, refresh semantics, read-only safeguards, and limitations.
+
+```bash
+MINI_SIEM_DATABASE="$PWD/data/mini-siem.db" \
+  python -m streamlit run mini_siem/dashboard/app.py \
+  --server.address 127.0.0.1 --browser.gatherUsageStats false
+```
+
+Use locally only; public exposure requires authentication and additional security.
