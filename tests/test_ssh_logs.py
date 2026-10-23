@@ -300,3 +300,75 @@ def test_unsupported_groups_do_not_export_raw_content(source):
     serialized = json.dumps(report)
     assert events[0]["Original"]["Content"] not in serialized
     assert "synthetic template" not in serialized
+
+
+@pytest.mark.parametrize("message,ip,status", [
+    ("Received disconnect from 192.0.2.10: 11: Bye Bye [preauth]", "192.0.2.10", "supported_peer"),
+    ("Received disconnect from 198.51.100.7: 11: disconnected by user", "198.51.100.7", "supported_peer"),
+    ("Received disconnect from 192.0.2.10: 11: disconnected by user [preauth]", "192.0.2.10", "supported_peer"),
+    ("Received disconnect FROM 192.0.2.10: 11: Bye Bye", "192.0.2.10", "supported_peer"),
+    ("from 999.0.2.10: 11: Bye Bye", None, "invalid_peer"),
+    ("from 192.0.2.999: 11: Bye Bye", None, "invalid_peer"),
+    ("from 192.00.2.10: 11: Bye Bye", None, "invalid_peer"),
+    ("from 192.0.2: 11: Bye Bye", None, "invalid_peer"),
+    ("from 192.0.2.10:: 11: Bye Bye", None, "invalid_peer"),
+    ("from 192.0.2.10:22 11: Bye Bye", None, "invalid_peer"),
+    ("from 192.0.2.10:, 11: Bye Bye", None, "invalid_peer"),
+    ("from example.invalid: 11: Bye Bye", None, "invalid_peer"),
+    ("rhost=192.0.2.10:", None, "invalid_peer"),
+    ("Connection closed by 192.0.2.10:", None, "invalid_peer"),
+    ("peer 192.0.2.10: unexpected context", None, "no_ip_evidence"),
+    ("Received disconnect from 2001:db8::1 11: Bye Bye", "2001:db8::1", "supported_peer"),
+    ("Received disconnect from 2001:db8:: 11: Bye Bye", "2001:db8::", "supported_peer"),
+    ("Received disconnect from :: 11: Bye Bye", "::", "supported_peer"),
+    ("from 2001:db8::1: 11: Bye Bye", None, "invalid_peer"),
+    ("from ::ffff:192.0.2.10: 11: Bye Bye", None, "invalid_peer"),
+    ("from [2001:db8::1]: 11: Bye Bye", None, "invalid_peer"),
+    ("from 192.0.2.10: from 192.0.2.11: 11: Bye Bye", None, "ambiguous_peer"),
+    ("from 192.0.2.10: rhost=2001:db8::1", None, "ambiguous_peer"),
+    ("from 192.0.2.10: from malformed:", None, "invalid_peer"),
+    ("from 192.0.2.10: rhost=192.0.2.10", "192.0.2.10", "supported_peer"),
+])
+def test_ipv4_separator_regression(message, ip, status):
+    parsed = parse_message(message)
+    assert parsed["SourceIP"] == ip
+    assert parsed["ParseStatus"] == status
+
+
+def test_e24_e7_correction_preserves_events_idempotency_and_guard(source, storage):
+    from mini_siem.ingestion.ssh_events import PARSER_VERSION
+    frame = pd.read_csv(source)
+    frame.loc[0, ["Content", "EventId"]] = ["Received disconnect from 192.0.2.10: 11: Bye Bye [preauth]", "E24"]
+    frame.loc[1, ["Content", "EventId"]] = ["Received disconnect from 192.0.2.10: 11: disconnected by user", "E7"]
+    frame.to_csv(source, index=False)
+    before = source.read_bytes()
+    events, digest = load_events(source)
+    features = aggregate_features(events)
+    row = features.set_index("SourceIP").loc["192.0.2.10"]
+    assert row.EventCount == row.UniqueEventTypes == 2
+    assert row.FailedAuthCount == row.InvalidUserCount == row.FailedAuthRate == 0
+    report = analysis_report(events, features, digest)
+    assert report["parser_version"] == PARSER_VERSION == "ssh-historical-v2"
+    assert not report["model_compatibility"]["inference_allowed"]
+    with pytest.raises(ValueError):
+        require_model_compatibility(report)
+    assert persist_events(storage, events, digest, "v2-events")["inserted_events"] == 6
+    assert persist_events(storage, events, digest, "v2-events")["inserted_events"] == 0
+    with closing(connect_database(storage)) as connection:
+        raw = json.loads(connection.execute("SELECT original_fields_json FROM ssh_event_details ORDER BY event_id").fetchone()[0])
+        assert raw["Content"] == frame.loc[0, "Content"]
+        assert connection.execute("SELECT COUNT(*) FROM security_events WHERE occurred_at IS NOT NULL").fetchone()[0] == 0
+    assert source.read_bytes() == before
+
+
+def test_parser_version_conflict_preserves_v1_history(source, storage):
+    events, digest = load_events(source)
+    persist_events(storage, events, digest, "v1-history")
+    with closing(connect_database(storage)) as connection, connection:
+        # Represent an existing historical v1 batch; never rewrite it on retry.
+        connection.execute("UPDATE ssh_event_details SET parser_version='ssh-historical-v1'")
+        before = [tuple(row) for row in connection.execute("SELECT * FROM ssh_event_details")]
+    with pytest.raises(ValueError, match="parser version conflict"):
+        persist_events(storage, events, digest, "v1-history")
+    with closing(connect_database(storage)) as connection:
+        assert before == [tuple(row) for row in connection.execute("SELECT * FROM ssh_event_details")]

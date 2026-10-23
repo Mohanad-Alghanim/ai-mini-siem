@@ -10,9 +10,9 @@ from mini_siem.ingestion.csv_loader import load_csv
 
 
 COLUMNS = ("LineId", "Date", "Day", "Time", "Component", "Pid", "Content", "EventId", "EventTemplate")
-PARSER_VERSION = "ssh-historical-v1"
+PARSER_VERSION = "ssh-historical-v2"
 # Only explicit remote-peer contexts count as SourceIP evidence.
-PEER = re.compile(r"(?:\bfrom\s+|\brhost=|\bclosed by\s+)(\S+)", re.IGNORECASE)
+PEER = re.compile(r"(?P<context>\bfrom\s+|\brhost=|\bclosed by\s+)(?P<token>\S+)", re.IGNORECASE)
 FAILURE = re.compile(r"^Failed (?:password|publickey|keyboard-interactive|none|hostbased)\b|\bauthentication failure\b", re.IGNORECASE)
 ACCEPTED = re.compile(r"^Accepted (?:password|publickey|keyboard-interactive|none|hostbased)\b", re.IGNORECASE)
 INVALID = re.compile(r"\binvalid user\b", re.IGNORECASE)
@@ -20,9 +20,22 @@ INVALID = re.compile(r"\binvalid user\b", re.IGNORECASE)
 
 def parse_message(content):
     candidates, invalid = set(), False
-    for token in PEER.findall(content):
+    for match in PEER.finditer(content):
+        token = match.group("token")
         try:
-            candidates.add(str(ip_address(token)))
+            # First preserve any already-valid IPv4/IPv6 token verbatim in
+            # meaning. Never rstrip(':'): trailing IPv6 colons are meaningful.
+            try:
+                address = ip_address(token)
+            except ValueError:
+                # SSH disconnect syntax uses `from IPv4: reason`. Only this
+                # context and exactly one terminal separator are normalized.
+                if not match.group("context").lower().startswith("from") or not re.fullmatch(r"[0-9]{1,3}(?:\.[0-9]{1,3}){3}:", token):
+                    raise
+                address = ip_address(token[:-1])  # strict octet/leading-zero validation
+                if address.version != 4:
+                    raise ValueError("Not an IPv4 separator")
+            candidates.add(str(address))
         except ValueError:
             invalid = True
     if invalid:

@@ -91,13 +91,22 @@ the hash, validation and processing refer to the same input. A private temporary
 CSV enables reuse of the existing loader and is removed automatically. Original
 CSV files are opened for reading only.
 
-## Parser contract: ssh-historical-v1
+## Parser contract: ssh-historical-v2
 
 Supported remote-peer contexts are case-insensitive `from IP`, `rhost=IP`, and
 `closed by IP`. The address token must be a complete valid IPv4/IPv6 address;
-IPv6 is canonicalized. Bracket/port-suffixed tokens, hostnames, reverse-DNS
-lookups, embedded address strings, or other formats are not guessed into a
-SourceIP. This deliberately conservative rule may miss real peers.
+IPv6 is canonicalized. Version 2 additionally accepts a strictly valid dotted
+IPv4 address followed by exactly one terminal separator colon in the `from IP:`
+context, as in `Received disconnect from 192.0.2.10: 11: Bye Bye [preauth]`.
+The unmodified token is validated first. Only when that fails, and only in the
+`from` context with an exact dotted-IPv4-plus-colon shape, is one separator
+removed before strict IPv4 validation. Invalid octets and leading-zero octets
+remain rejected. This exception does not apply to `rhost=` or `closed by`.
+
+Meaningful IPv6 syntax is never stripped: valid `2001:db8::` remains valid, while
+an invalid `2001:db8::1:` is rejected rather than repaired. Bracket/port-suffixed
+tokens, multiple separator colons, hostnames, reverse-DNS lookups, embedded address
+strings, or other formats are not guessed into a SourceIP. This deliberately conservative rule may miss real peers.
 
 - `supported_peer`: exactly one distinct valid address and no invalid peer tokens.
 - `ambiguous_peer`: more than one distinct valid peer address; SourceIP is NULL.
@@ -245,3 +254,95 @@ A separate synthetic CLI review exported 3 IP feature rows from 6 events:
 inserted zero, and original input bytes were unchanged. The report kept inference
 blocked. Temporary demonstration files were removed. These are synthetic checks,
 not the real dataset's coverage or feature results.
+
+## Parser correction before merge: v2 review
+
+The supplied real-data review identified the separator formatting in 413 E24
+and 45 E7 messages. Those are external observations, not measured results of this
+cloud correction. Do not assume that 458 records will become supported: another
+invalid/ambiguous peer in the same message could still block extraction. The
+correction changes only peer normalization. Feature formulas, model thresholds,
+AI compatibility guards and event storage/idempotency logic are unchanged.
+The report and new stored details identify `ssh-historical-v2`.
+
+To regenerate reports at guaranteed fresh local paths, from the repository root:
+
+```bash
+git fetch origin
+git switch task-006-ssh-log-ingestion
+git pull --ff-only origin task-006-ssh-log-ingestion
+source .venv/bin/activate
+python -m pytest -q
+mkdir -p reports
+ssh_review_dir="$(mktemp -d reports/ssh-parser-v2-XXXXXX)"
+python -m mini_siem.ssh_logs inspect \
+  --input "$HOME/siem-private/ssh/OpenSSH_2k.log_structured.csv" \
+  --baseline "$HOME/siem-private/ssh/ssh_baseline_features.csv" \
+  --features "$ssh_review_dir/features.csv" \
+  --report-dir "$ssh_review_dir"
+```
+
+Compare against the saved **v1** report (change the first path to your actual
+previous report). This prints counts and per-feature gap summaries without IPs:
+
+```bash
+ssh_previous_report="reports/ssh-feature-review/summary.json"
+python - "$ssh_previous_report" "$ssh_review_dir/summary.json" <<'PY'
+import json
+import sys
+
+old, new = [json.load(open(path, encoding="utf-8")) for path in sys.argv[1:]]
+print("Metric | previous | corrected")
+for name, getter in (
+    ("Total events", lambda r: r["events"]),
+    ("Supported peer events", lambda r: r["events_with_source_ip"]),
+    ("Invalid peer events", lambda r: r["parse_status_counts"].get("invalid_peer", 0)),
+    ("Generated IP records", lambda r: r["generated_ip_records"]),
+):
+    print(name, getter(old), getter(new), sep=" | ")
+
+def gaps(report, feature):
+    comparison = report.get("baseline_comparison")
+    if comparison is None:
+        return "comparison not performed"
+    values = [abs(row["differences"][feature]["generated"] - row["differences"][feature]["baseline"])
+              for row in comparison["feature_differences"] if feature in row["differences"]]
+    return {"differing_shared_ips": len(values), "maximum_absolute_gap": max(values, default=0)}
+
+for feature in ("EventCount", "UniqueEventTypes", "FailedAuthCount", "InvalidUserCount", "FailedAuthRate"):
+    print(feature, gaps(old, feature), gaps(new, feature), sep=" | ")
+for label, report in (("previous", old), ("corrected", new)):
+    comparison = report.get("baseline_comparison")
+    if comparison is not None:
+        print(label, "matching IPs:", comparison["matching_source_ips"],
+              "baseline IPs without generated features:", len(comparison["baseline_ips_without_generated_features"]),
+              "generated IPs absent from baseline:", len(comparison["generated_ips_not_in_baseline"]),
+              "numerical_match:", comparison["numerical_match"])
+print("Existing-model inference allowed:", new["model_compatibility"]["inference_allowed"])
+PY
+```
+
+The new Markdown/JSON report contains detailed per-IP, per-feature generated and
+baseline values. Zero gaps on shared IPs do not account for unmatched/ambiguous
+baseline IPs; review those lists too. Keep reports private. Improved extraction
+or even `numerical_match: true` does not demonstrate full semantic compatibility
+or permit automatic inference. No real-data before/after results are claimed
+until these commands run on the private files.
+
+No storage migration is needed for the parser correction. Existing v1 event
+batches remain unchanged. The existing parser-version conflict check deliberately
+rejects re-ingestion into a v1 batch ID. Prefer report-only review first. If a
+separate v2 event history is intentionally desired after review, use a new batch
+ID (for example `openssh-historical-v2`); this adds another batch and its event
+rows, so total raw-event counts include both histories. Retrying that same v2
+batch remains idempotent. Do not delete or overwrite the v1 history.
+
+Correction validation (Python 3.12 cloud): **214 tests passed**, including all
+187 prior tests and 27 new regressions. The historical-ingestion subset passed
+61 tests. Regression coverage includes representative synthetic E24/E7 disconnect
+messages, malformed octets/tokens, hostnames, meaningful IPv6 trailing colons,
+IPv6 invalid suffixes, ambiguous peers, original-content preservation, idempotent
+v2 retries, v1 history/version conflicts, and unchanged inference blocking.
+Dependency and Git whitespace checks passed. The documented before/after
+comparison script was exercised with temporary synthetic report fixtures.
+Real-data corrected coverage and baseline feature differences remain pending.
