@@ -9,6 +9,7 @@ from mini_siem.dashboard.charts import (
     alerts_by_source, prediction_distribution, processing_counts, score_distribution,
 )
 from mini_siem.dashboard.queries import DashboardDataError, read_snapshot
+from mini_siem.dashboard.events import historical_events, lab_review
 
 
 st.set_page_config(page_title="Mini SIEM | SSH Operations", page_icon="🛡️", layout="wide", initial_sidebar_state="expanded")
@@ -18,7 +19,7 @@ st.warning("Local use only. Do not expose Streamlit publicly without authenticat
 
 with st.sidebar:
     st.header("Mini SIEM")
-    page = st.radio("Navigation", ["Overview", "Alerts", "Predictions", "Data Sources / System Information"])
+    page = st.radio("Navigation", ["Overview", "Security Events", "Alerts", "Predictions", "Data Sources / System Information"])
     database = st.text_input("SQLite database", value=os.environ.get("MINI_SIEM_DATABASE", "data/mini-siem.db"), type="password", help="Existing TASK-004 database. Read-only access; no database is created.")
     st.button("Refresh", help="Rerun the page and read a fresh database snapshot.")
     st.caption("Refresh rereads stored data. This dashboard does not ingest logs or run model inference.")
@@ -28,9 +29,12 @@ try:
 except DashboardDataError as error:
     st.error(str(error))
     st.info("Select an existing initialized TASK-004 database. Initialize or ingest with the backend CLI outside the dashboard.")
-    st.stop()
+    if page != "Security Events":
+        st.stop()
+    snapshot = None
 
 st.caption(f"Snapshot read at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')} · Read-only")
+st.caption("Historical/offline inference only. New event-derived features and native SSH lab records are not passed to the legacy model.")
 st.info("Anomaly means unusual behavior, not a confirmed attack. The current model is a 30-record proof of concept; independent labeled ground truth is required for accuracy metrics.")
 
 
@@ -87,6 +91,41 @@ if page == "Overview":
                 st.caption("Only one processing date is recorded; this does not establish a historical trend.")
         if snapshot["skipped_timestamps"]:
             st.warning(f"{snapshot['skipped_timestamps']} records have invalid or timezone-ambiguous processing timestamps and were excluded from the date chart.")
+elif page == "Security Events":
+    st.subheader("Security event evidence")
+    stored, native = st.tabs(["Stored historical events", "Native SSH lab evidence"])
+    with stored:
+        st.caption("Read-only event metadata, separate from IP-level model predictions. No original timestamp is invented.")
+        if snapshot is None:
+            st.info("Select an existing initialized database to inspect stored historical events.")
+        else:
+            event_batch = st.text_input("Historical batch (blank for all)", key="event-batch")
+            event_ip = st.text_input("Search event SourceIP", key="event-ip")
+            try:
+                events = historical_events(database, batch=event_batch or None, source_ip=event_ip or None)
+                if events.empty:
+                    st.info("No stored security events match these filters.")
+                else:
+                    st.caption(f"{len(events)} stored events · Metadata only; original log contents remain private.")
+                    st.dataframe(events, hide_index=True, use_container_width=True)
+            except DashboardDataError as error:
+                st.error(str(error))
+    with native:
+        st.caption("Offline sanitized evidence-review report. This screen does not open the root-private capture, rerun integrity verification, ingest events, or run AI.")
+        review_path = st.text_input("Authorized sanitized review.json", value=os.environ.get("MINI_SIEM_LAB_REVIEW", ""), type="password", key="lab-review")
+        if not review_path:
+            st.info("Generate a V2 evidence review with the CLI, then select its sanitized review.json. Keep the capture and credentials protected.")
+        else:
+            try:
+                reviewed = lab_review(review_path)
+                for column, (label, count) in zip(st.columns(4), reviewed['counts'].items()):
+                    column.metric(label, count)
+                st.warning("Server evidence is not a verified attack label. No trusted original event times; per-experiment correlation remains unresolved. Training and inference are disabled for this evidence.")
+                st.caption(f"{reviewed['experiments']} recorded experiment manifests · Counts are from the offline report, not automatic live monitoring.")
+                st.dataframe(reviewed['classifications'], hide_index=True, use_container_width=True)
+                st.dataframe(reviewed['events'], hide_index=True, use_container_width=True)
+            except DashboardDataError as error:
+                st.error(str(error))
 elif page == "Alerts":
     st.subheader("Anomaly alerts")
     records = table_filters("alerts")["alerts"]
@@ -106,9 +145,11 @@ elif page == "Predictions":
 else:
     st.subheader("Data sources and system information")
     st.write("Source: existing local SQLite backend, schema version 1. Database paths are not displayed in reports or errors.")
-    st.write("Tables: ingestion_batches, security_events, predictions, alerts.")
+    st.write("Tables: ingestion_batches, security_events, predictions, alerts. Native lab evidence is a separate sanitized offline review file, not AI input or a database event batch.")
     st.write("Model IDs are artifact SHA-256 identifiers. The dashboard neither loads model files nor retrains models.")
     st.write("Processing timestamps are generated in UTC. Original event times and timestamp years are never inferred.")
+    st.write("Legacy inference is limited to original compatible baseline records. Newly extracted historical features and native lab records remain blocked; matching column names do not establish compatibility.")
+    st.write("AI execution is offline, not real-time intrusion detection. The native lab provides controlled authentication/session evidence, not a validated six-attack detector.")
     st.write("No raw log contents are queried or displayed. Zero raw events means none are stored, not that no activity occurred.")
     st.write("Data changes only when the separate backend writes it. Refresh or another widget interaction rereads the database; there is no automatic polling.")
     st.write("Prediction metrics and charts summarize stored records, including repeated batches/model versions. No accuracy, precision, recall, or F1 is reported.")

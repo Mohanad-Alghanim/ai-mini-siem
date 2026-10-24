@@ -9,6 +9,13 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
+## Final demonstration
+
+Start with the consolidated [graduation demonstration guide](docs/final-demonstration.md):
+architecture, installation, original-baseline replay, event/prediction/alert screens,
+native lab evidence, six-scenario completion status and one Kali acceptance checklist.
+The system performs offline historical inference, not real-time AI detection.
+
 ## Current scope: TASK-001 through TASK-011
 
 This repository provides the modular project skeleton, a read-only CSV inspection
