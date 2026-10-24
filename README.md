@@ -9,7 +9,14 @@ Forest for anomaly detection, SQLite for storage, Streamlit for the dashboard,
 and Plotly for visualization. Pytest provides automated tests and Git tracks
 project changes. SQLite is included in Python's standard library.
 
-## Current scope: TASK-001 through TASK-010
+## Final demonstration
+
+Start with the consolidated [graduation demonstration guide](docs/final-demonstration.md):
+architecture, installation, original-baseline replay, event/prediction/alert screens,
+native lab evidence, six-scenario completion status and one Kali acceptance checklist.
+The system performs offline historical inference, not real-time AI detection.
+
+## Current scope: TASK-001 through TASK-011
 
 This repository provides the modular project skeleton, a read-only CSV inspection
 and validation pipeline, an initial Isolation Forest anomaly engine, SQLite
@@ -30,6 +37,7 @@ ai-mini-siem/
 ├── .gitignore
 ├── README.md
 ├── requirements.txt
+├── pytest.ini
 ├── .streamlit/
 │   └── config.toml
 ├── config/
@@ -274,3 +282,8 @@ Native lab code: `mini_siem/native_lab/{control,safety,telemetry}.py`; CLI:
 `python -m mini_siem.kali_ssh_lab --help`; synthetic tests:
 `tests/test_kali_ssh_lab.py`. Follow the [Kali guide](docs/kali-native-ssh-lab.md)
 for explicit privileged lifecycle commands and unchanged-system-service checks.
+
+TASK-011 adds a [read-only SSH evidence review](docs/ssh-evidence-review.md)
+with privacy-safe reports and explicitly unresolved experiment correlation.
+Run `python -m mini_siem.evidence_review --help` for the CLI. Default pytest
+discovery is limited to `tests/` by the repository-level `pytest.ini`.
