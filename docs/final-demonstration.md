@@ -1,5 +1,8 @@
 # Final graduation demonstration: AI-Powered Mini SIEM
 
+PR #13 merged this workflow and TASK-011 into main at 80e4a5e. Run the
+reviewed main branch; old review branches are not needed for operation.
+
 This is a local educational proof of concept: offline SSH behavioral anomaly
 inference, SQLite predictions/alerts, historical event inspection, a native
 loopback SSH lab and separate evidence review. It is **not real-time AI intrusion
@@ -46,11 +49,15 @@ There is no override for new extracted features and no retraining in this workfl
 
 ## Install / select the environment
 
-From your existing repository on Kali, after reviewing the final branch:
+From the existing Kali checkout, after preserving unrelated local changes and
+reviewing the merged implementation on main:
 
 ```bash
+cd ~/ai-mini-siem
+git status --short
 git fetch origin
-git switch final-sprint-mini-siem
+git switch main
+git pull --ff-only origin main
 source .venv/bin/activate
 python -c 'import sys, sklearn, streamlit; print(sys.executable); print(sklearn.__version__, streamlit.__version__)'
 python -m pip check
@@ -181,7 +188,7 @@ proof. Training and inference remain disabled **for all this native evidence**.
 As the normal dashboard user, from the repository root:
 
 ```bash
-python -m streamlit run mini_siem/dashboard/app.py --server.address 127.0.0.1 --server.port 8501
+python -m streamlit run mini_siem/dashboard/app.py --server.address 127.0.0.1 --server.port 8501 --browser.gatherUsageStats false
 ```
 
 Open `http://127.0.0.1:8501` in the Kali browser. Configuration disables usage
@@ -265,7 +272,7 @@ does not fabricate success or silently add risky simulations/services.
 
 ## Single final Kali acceptance checklist
 
-- [ ] Review `final-sprint-mini-siem` (includes TASK-011); keep PRs unmerged until approval.
+- [ ] Use reviewed main, including merged PR #13 (TASK-011 and final integration). Review any new changes before applying them.
 - [ ] Confirm branch, clean/preserved Git changes, tracked pytest.ini and existing venv imports.
 - [ ] Run full pytest and pip check; retain actual results privately.
 - [ ] Select existing DB (A) or confirm original training assets and build a fresh DB (B).
@@ -278,7 +285,7 @@ does not fabricate success or silently add risky simulations/services.
 - [ ] If live scenarios are shown, verify loopback PID/address, limits, normal controls and failure evidence.
 - [ ] Stop/clean up only the newly created lab; verify existing SSH config/service and original capture unchanged.
 - [ ] State unsupported attack categories, 30-row training replay, unverified labels/time/correlation and no independent evaluation.
-- [ ] Stop the dashboard. Do not merge or start additional work without approval.
+- [ ] Stop the dashboard and preserve the private acceptance record.
 
 ## Automated validation
 
@@ -293,9 +300,12 @@ were added.
 ## Remaining blockers and validation boundary
 
 Cloud tests use synthetic fixtures, including a temporary synthetic test model;
-no private dataset/artifact is bundled or trained for presentation. Real Kali
-capture, original model/CSV pairing, runtime compatibility, actual model counts,
-privileged lab behavior and browser acceptance require the checklist above.
+no private dataset/artifact is bundled or trained for presentation. The recorded Kali evidence includes the existing 27 Normal / 3 Anomaly /
+3 alert observation and native capture integrity review with 39 records, four
+scenarios and six attempts. These are externally supplied local observations,
+not cloud measurements or universal expected values. V2 private category counts,
+original model/CSV pairing on a new installation, exact runtime compatibility
+and a new browser/service-safety acceptance run require the checklist above.
 An unavailable/mismatched model environment or unverifiable baseline pairing
 blocks new inference, not inspection of previously stored predictions. Missing
 authorized report access blocks the native-evidence panel, not the rest of the UI.
