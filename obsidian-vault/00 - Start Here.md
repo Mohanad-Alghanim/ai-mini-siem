@@ -7,7 +7,7 @@ tags: [index, navigation]
 
 # Mini SIEM Knowledge Hub
 
-Open this folder as an Obsidian vault. These Markdown notes use standard [[wikilinks]] and YAML metadata.
+Open this folder as an Obsidian vault. These Markdown notes use standard wiki-style links and YAML metadata.
 
 ## Explore
 - [[01 - Project Overview]]
