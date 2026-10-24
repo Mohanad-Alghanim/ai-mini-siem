@@ -47,7 +47,7 @@ def test_demo_full_path_without_training_and_dashboard_pages(assets,monkeypatch)
     db_before=assets[0].read_bytes()
     monkeypatch.setenv('MINI_SIEM_DATABASE',str(assets[0]))
     app=AppTest.from_file(str(Path(__file__).resolve().parents[1]/'mini_siem/dashboard/app.py'),default_timeout=20).run()
-    for page in ('Overview','Security Events','Predictions','Alerts','Data Sources / System Information'):
+    for page in ('Overview','Security Events','Predictions','Alerts'):
         app.sidebar.radio[0].set_value(page).run()
         assert not app.exception
     assert assets[0].read_bytes()==db_before

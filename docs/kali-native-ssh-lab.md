@@ -3,8 +3,9 @@
 This lab uses native OpenSSH, Python subprocesses and local files. No container
 runtime or additional VM is used. It is separate from historical ingestion,
 SQLite, alerts, the dashboard, legacy feature contracts and the Isolation Forest.
-It does not authorize training or inference. Real SSH execution and security
-validation must take place on Kali, not in the cloud development environment.
+It does not authorize training or inference. Real SSH execution takes place on Kali, not in the cloud development
+environment. Recorded local collection/integrity observations are summarized
+in section 8; they are distinct from independent security/attack validation.
 
 ## 1. Understand the isolation and privileges
 
@@ -284,7 +285,7 @@ created disposable account and has no processes, then explicitly run
 runtime/audit directory after retention review. Never infer ownership from a
 similar name alone. Interrupted account deletion may require this manual recovery.
 
-## 8. Troubleshooting and pending Kali validation
+## 8. Troubleshooting and validation evidence
 
 - Missing packages or `/run/sshd`: use the prerequisites section; no service fallback.
 - Occupied 2222: do not kill its owner; lab startup must fail.
@@ -298,7 +299,7 @@ similar name alone. Interrupted account deletion may require this manual recover
 - Unknown format/partial line: stop, collect a stable fresh snapshot and review
   raw evidence. No historical-parser fallback or inference override exists.
 
-Cloud results: **342 tests passed** (296 existing plus 46 native-lab tests).
+At initial TASK-010 implementation, cloud results were **342 tests passed** (296 existing plus 46 native-lab tests).
 Python compilation, dependency consistency and whitespace checks passed. No new
 Python dependencies were added. No live accounts, servers or services were changed.
 
@@ -314,6 +315,15 @@ Cloud validation does not establish Kali security. On Kali, record actual
 loopback ownership, fixed scenario client/server evidence, timing and permissions,
 raw/normalized record counts and readiness findings, unchanged system-service
 hashes/PID, absence of the lab listener after stop and account removal after
-cleanup. No real log counts, successful authentications or security validation
-are claimed here. Stop after TASK-010 for Project Manager review; do not merge or
-begin training, inference or TASK-011.
+cleanup when performing a new acceptance run.
+
+The Project Manager subsequently recorded a real Kali capture with **39 records,
+31 native-adapter-supported, 8 unsupported and 23 with a source IP**, from four
+completed controlled scenarios and six client attempts. Its integrity review
+passed. These are provided local observations, not cloud execution or
+independently verified event labels. OpenSSH 10.5 effective-configuration parsing
+was corrected before that collection. TASK-011 later added the separately
+versioned CRLF/forced-command evidence review fix; updated private V2 category
+counts are not supplied in this audit. See [evidence review](ssh-evidence-review.md).
+Native model inference remains disabled. This guide is maintained on main;
+TASK-010 is merged through PR #11, not an outstanding development stage.

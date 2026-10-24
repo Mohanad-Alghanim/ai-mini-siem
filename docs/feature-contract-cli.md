@@ -3,11 +3,7 @@
 From the repository root:
 
 ```bash
-git fetch origin
-git switch task-008-feature-pipeline-strategy
-python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 python -m pytest -q
 
 python -m mini_siem.feature_contract
@@ -44,8 +40,9 @@ The public contract records code hashes, not private dataset hashes. Optional
 input inspection proves only which local bytes were inspected and whether
 existing loaders accept them. It does not establish legacy provenance, semantic
 compatibility, adequate evaluation data, experimental authorization, or model
-readiness. Real-data validation remains pending in the cloud. The Project Manager's
-Kali results are attributed in the audit, not re-created as code constants.
+readiness. This audit does not independently rerun private input inspection.
+The Project Manager's recorded Kali results are attributed in the provenance
+audit, not re-created as code constants.
 
 Read [the provenance audit](feature-provenance-audit.md) and
 [the strategy/consistency design](feature-pipeline-strategy.md) before proposing
@@ -59,4 +56,6 @@ blocked readiness, private-input hash inspection, unchanged input bytes, output
 protection and no model/database operations. Dependency and Git whitespace checks
 passed. A separate CLI run generated both readiness reports with contract_valid
 true and all model actions false; temporary reports were removed. Real-data
-inspection remains pending; no private readiness report is committed.
+inspection was not independently repeated in this audit; no private readiness
+report is committed. This does not negate the recorded Kali results in the
+[provenance audit](feature-provenance-audit.md).

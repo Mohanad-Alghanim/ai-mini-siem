@@ -8,7 +8,8 @@ artifact input, training, inference, or compatibility override.
 
 ## Current compatibility decision
 
-**NOT DEMONSTRATED — existing-model inference remains blocked.** Matching IP
+**NOT DEMONSTRATED for newly extracted event features: existing-model inference
+on those features remains blocked.** Matching IP
 sets do not establish matching event membership, counting rules or feature
 semantics. Numerical agreement alone also cannot establish model provenance or
 semantic compatibility. This tool does not enable the existing model, change its
@@ -27,11 +28,7 @@ these numbers.
 From the repository root, using Python 3.10+:
 
 ```bash
-git fetch origin
-git switch task-007-feature-compatibility
-python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 python -m pytest -q
 
 mkdir -p reports

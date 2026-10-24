@@ -7,6 +7,11 @@ legacy contracts and lab security controls are unchanged.
 
 ## Safely synchronize pytest.ini on Kali
 
+The branch-switch synchronization below is retained for published-main setup.
+Do not execute it over the uncommitted TASK-012 delivery checkout. Preserve that
+working tree and its untracked files; no branch integration or tests are needed
+for ordinary dashboard viewing.
+
 Repository-level `pytest.ini` now contains exactly:
 
 ```ini
@@ -43,14 +48,14 @@ elif p.exists():
 else:
     print('No local pytest.ini to move.')
 PY
-git fetch origin main task-011-ssh-evidence-review
-git switch task-011-ssh-evidence-review
-git pull --ff-only origin task-011-ssh-evidence-review
+git fetch origin main
+git switch main
+git pull --ff-only origin main
 ```
 
-If this branch has not been checked out locally, Git normally sets up tracking
-when switching; alternatively use `git switch --track
-origin/task-011-ssh-evidence-review`. Once checked out, compare the preserved file
+TASK-011 and final integration are merged in main through PR #13; do not
+return to the old draft branch for ordinary operation. Once updated, compare
+the preserved file
 with the tracked one (`cmp pytest.ini pytest.ini.task011-local-backup`). Keep the
 backup private/untracked or remove only that exact backup after verifying equality.
 Do not commit it. No dataset or capture directory is moved or removed.
@@ -246,15 +251,18 @@ store the reports securely even though raw messages and IPs are omitted.
 The supplied Kali observations (39 records, 31 supported, 8 unsupported, 23 with
 SourceIP, four scenarios and six attempts) are user-reported context, not hardcoded
 results or cloud-verified findings. Actual contents are private and unavailable
-here. The code/tests use synthetic fixtures; detailed real unsupported categories
-and correlation findings remain pending a local run.
+here. The supplied V1 integrity review also found all 39 records ambiguous.
+V2 has a source-backed compatibility correction; updated private V2 counts and
+remaining unsupported categories are not included in the recorded evidence
+available to this audit. Run the diagnostic locally rather than infer them.
 
 ## Validation results
 
-Cloud checks: **421 tests passed** (all 393 previous tests plus 28 compatibility/diagnostic
+At the V2 compatibility correction, cloud checks were **421 tests passed** (all 393 previous tests plus 28 compatibility/diagnostic
 regressions; 55 evidence-review tests total). Dependency consistency, Python compilation and whitespace checks passed.
-No new dependencies or privileged operations were introduced. Real private
-Kali capture analysis remains pending.
+No new dependencies or privileged operations were introduced. The recorded
+Kali V1 review is described above; private V2 revalidation is not independently
+recorded here. The integrated main suite subsequently reached 427 passing tests.
 
 ## Exact local validation
 
@@ -272,5 +280,6 @@ Check the generated `review.json` and `review.md` privately, including integrity
 counts, candidate overlap and unresolved findings. A failed command returns 2 with
 a generic message and no raw content, sensitive paths or traceback. It creates no
 report directory on evidence-validation failure. No privileged lab lifecycle
-operations should be run for this task. Stop after TASK-011; do not merge or begin
-TASK-012 without review.
+operations are needed for evidence review. TASK-011 is complete in merged
+PR #13, consolidated with final integration; Draft #12 was not independently
+merged. Any later changes need their own review, not a new operational phase.

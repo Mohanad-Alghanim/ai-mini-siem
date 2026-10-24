@@ -4,18 +4,16 @@ This pipeline processes historical structured CSV files, not live logs. It parse
 observable evidence, exports IP-level features, optionally compares a baseline,
 and stores every validated original event locally. It never loads, predicts with,
 replaces, or trains an AI model. Real private datasets are unavailable in the
-cloud; real feature/coverage results and model compatibility remain pending.
+cloud. Subsequent recorded Kali review found 2,000 events, 1,647 attributed
+events, 353 unassigned events and 22 IPs with baseline differences. These are
+external observations; legacy compatibility remains not demonstrated.
 
 ## Exact Kali Linux commands
 
 From the repository root, using Python 3.10+:
 
 ```bash
-git fetch origin
-git switch task-006-ssh-log-ingestion
-python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
@@ -188,12 +186,12 @@ version. Do not pass these exports to the TASK-003/004 inference commands until
 Project Manager review establishes compatibility. Do not retrain or replace a
 model to force agreement. No attack accuracy metrics are calculated.
 
-## Explicit additive storage proposal
+## Explicit additive storage extension
 
-The reserved security_events table can hold batch identity, source record, IP,
+The existing security_events table holds batch identity, source record, IP,
 event type and processing timestamp. It cannot preserve original LineId, raw
 Content, partial Date/Day/Time, template or parser outcomes. Silently dropping
-those essential fields would lose provenance. The proposed minimal extension is
+those essential fields would lose provenance. The implemented minimal extension is
 one child table, installed **only** by the separate `prepare-storage` command:
 
 ```sql
@@ -255,7 +253,7 @@ inserted zero, and original input bytes were unchanged. The report kept inferenc
 blocked. Temporary demonstration files were removed. These are synthetic checks,
 not the real dataset's coverage or feature results.
 
-## Parser correction before merge: v2 review
+## Historical parser correction: v2 review (merged in PR #6)
 
 The supplied real-data review identified the separator formatting in 413 E24
 and 45 E7 messages. Those are external observations, not measured results of this
@@ -268,9 +266,6 @@ The report and new stored details identify `ssh-historical-v2`.
 To regenerate reports at guaranteed fresh local paths, from the repository root:
 
 ```bash
-git fetch origin
-git switch task-006-ssh-log-ingestion
-git pull --ff-only origin task-006-ssh-log-ingestion
 source .venv/bin/activate
 python -m pytest -q
 mkdir -p reports
@@ -326,8 +321,9 @@ The new Markdown/JSON report contains detailed per-IP, per-feature generated and
 baseline values. Zero gaps on shared IPs do not account for unmatched/ambiguous
 baseline IPs; review those lists too. Keep reports private. Improved extraction
 or even `numerical_match: true` does not demonstrate full semantic compatibility
-or permit automatic inference. No real-data before/after results are claimed
-until these commands run on the private files.
+or permit automatic inference. The supplied later Kali counts are attributed above. A fresh before/after
+comparison still requires the actual saved reports; this audit does not invent
+per-feature deltas from unavailable private files.
 
 No storage migration is needed for the parser correction. Existing v1 event
 batches remain unchanged. The existing parser-version conflict check deliberately
@@ -345,4 +341,7 @@ IPv6 invalid suffixes, ambiguous peers, original-content preservation, idempoten
 v2 retries, v1 history/version conflicts, and unchanged inference blocking.
 Dependency and Git whitespace checks passed. The documented before/after
 comparison script was exercised with temporary synthetic report fixtures.
-Real-data corrected coverage and baseline feature differences remain pending.
+The later Kali observations are 1,647 supported-peer events out of 2,000,
+30 matching generated/baseline IPs and 22 IPs with at least one difference.
+Those supplied results supersede the earlier coverage observations, not the
+research caveat: inference on generated features is still blocked.
