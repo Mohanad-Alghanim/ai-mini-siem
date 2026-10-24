@@ -16,19 +16,21 @@ from mini_siem.native_lab.control import validate_experiment
 from mini_siem.native_lab.safety import digest
 from mini_siem.native_lab.telemetry import canonical, csv_bytes, inventory, normalize, summary
 
-VERSION = 'ssh-evidence-review-v1'
+VERSION = 'ssh-evidence-review-v2'
 CLASSES = ('authentication_success_evidence', 'authentication_failure_evidence',
            'session_open_evidence', 'session_close_evidence',
            'connection_or_transport_event', 'unsupported_or_ambiguous')
 PEER = r'(?P<account>[A-Za-z0-9_-]+) from (?P<ip>[^\s]+) port (?P<port>[0-9]+)'
 AUTH = re.compile(r'(?P<result>Accepted|Failed) publickey for '+PEER+r' ssh2(?:: (?:ED25519|RSA|ECDSA|ED25519-CERT|RSA-CERT|ECDSA-CERT) SHA256:[A-Za-z0-9+/=]+)?(?: \[preauth\])?')
-SESSION = re.compile(r'(?P<action>Starting session: command for|Close session: user) '+PEER+r' id [0-9]+')
+SESSION_V1 = re.compile(r'(?P<action>Starting session: command for|Close session: user) '+PEER+r' id [0-9]+')
+# Native lab policy forces /bin/true. Do not accept arbitrary command payloads.
+SESSION = re.compile(r"(?P<action>Starting session: (?:command|forced-command \(config\) '/bin/true') for|Close session: user) "+PEER+r' id [0-9]+')
 TRANSPORT = re.compile(r'(?:Server listening on 127\.0\.0\.1 port 2222\.|Connection from [^\s]+ port [0-9]+ on [^\s]+ port [0-9]+(?: rdomain [0-9]+)?|Received disconnect from [^\s]+ port [0-9]+:[^\r\n]*|Disconnected from (?:authenticating )?user [A-Za-z0-9_-]+ [^\s]+ port [0-9]+(?: \[preauth\])?|Received signal [0-9]+; terminating\.)')
 
 
-def classify(message):
-    """Explicit anchored server evidence only; unknown syntax stays ambiguous."""
-    match = AUTH.fullmatch(message) or SESSION.fullmatch(message)
+def _classify_exact(message, session_pattern):
+    """Classify an exact payload; internal peer values never enter diagnostics."""
+    match = AUTH.fullmatch(message) or session_pattern.fullmatch(message)
     if match:
         fields = match.groupdict()
         try:
@@ -43,6 +45,14 @@ def classify(message):
             category = CLASSES[2] if fields['action'].startswith('Starting') else CLASSES[3]
         return {'category': category, 'account': fields['account'], 'ip': fields['ip']}
     return {'category': CLASSES[4] if TRANSPORT.fullmatch(message) else CLASSES[-1]}
+
+
+def classify(message):
+    """Accept one native CRLF terminator remnant, never arbitrary whitespace."""
+    payload = message[:-1] if message.endswith('\r') else message
+    if '\r' in payload or '\n' in payload:
+        return {'category': CLASSES[-1]}
+    return _classify_exact(payload, SESSION)
 
 
 def unsupported_reason(message):
@@ -84,7 +94,7 @@ def snapshot_collection(source, target):
     return collection
 
 
-def verified_review(source):
+def verified_review(source, *, diagnostics=False):
     with tempfile.TemporaryDirectory(prefix='siem-evidence-') as temporary:
         root = Path(temporary)
         collection = snapshot_collection(source, root)
@@ -113,7 +123,70 @@ def verified_review(source):
             runs.append(run)
         if len(set(p['experiment_ids'])) != len(p['experiment_ids']) or set(p['experiment_ids']) != {run['experiment_id'] for run in runs}:
             raise ValueError('Experiment index and provenance disagree')
+        if diagnostics:
+            return diagnostic_report(records)
         return build_report(records, runs, checked, collection)
+
+
+def diagnostic_report(records):
+    """Only finite structural categories/booleans/counts; no input text/tokens/IDs."""
+    groups = Counter()
+    families = (
+        ('authentication_success_prefix', 'Accepted publickey for '),
+        ('authentication_failure_prefix', 'Failed publickey for '),
+        ('session_open_prefix', 'Starting session:'),
+        ('session_close_prefix', 'Close session:'),
+        ('listener_prefix', 'Server listening on '),
+        ('connection_prefix', 'Connection from '),
+        ('disconnect_prefix', 'Received disconnect from '),
+        ('disconnected_prefix', 'Disconnected from '),
+        ('termination_prefix', 'Received signal '),
+    )
+    for record in records:
+        message = record['original_message']
+        payload = message[:-1] if message.endswith('\r') else message
+        strict = _classify_exact(message, SESSION_V1)['category']
+        cr_probe = _classify_exact(payload, SESSION_V1)['category']
+        current = classify(message)['category']
+        family = next((name for name, prefix in families if payload.startswith(prefix)), 'other_structure')
+        if strict != CLASSES[-1]:
+            reason = 'matches_v1_exactly'
+        elif current != CLASSES[-1] and cr_probe != CLASSES[-1]:
+            reason = 'single_terminal_cr_prevents_v1_fullmatch'
+        elif current != CLASSES[-1]:
+            reason = 'documented_config_forced_command_variant_missing_in_v1'
+        elif '\r' in payload or '\n' in payload:
+            reason = 'embedded_or_repeated_line_control_not_accepted'
+        elif AUTH.fullmatch(payload) or SESSION.fullmatch(payload):
+            reason = 'invalid_peer_address_or_port'
+        elif family.startswith('authentication_'):
+            reason = 'authentication_core_or_suffix_does_not_match_supported_grammar'
+        elif family.startswith('session_'):
+            reason = 'session_payload_does_not_match_supported_grammar'
+        elif family != 'other_structure':
+            reason = 'transport_payload_does_not_match_supported_grammar'
+        else:
+            reason = 'no_recognized_structural_prefix'
+        # These feature flags recognize only fixed strings. Unknown token values
+        # (including command text, account, address and fingerprint) are never emitted.
+        shape = {'adapter_status':record['format_status'], 'structural_family':family,
+                 'terminal_cr':message.endswith('\r'),
+                 'embedded_or_repeated_cr': '\r' in payload,
+                 'leading_whitespace':bool(message and message[0].isspace()),
+                 'other_trailing_whitespace':bool(payload and payload[-1].isspace()),
+                 'config_forced_command_marker':payload.startswith('Starting session: forced-command (config) '),
+                 'fixed_lab_command_form':payload.startswith("Starting session: forced-command (config) '/bin/true' for "),
+                 'sha256_fingerprint_marker':bool(re.search(r'\bSHA256:', payload)),
+                 'preauth_marker':payload.endswith(' [preauth]'),
+                 'v1_category':strict, 'v1_after_single_cr_probe':cr_probe,
+                 'v2_category':current, 'mismatch_reason':reason}
+        groups[json.dumps(shape, sort_keys=True)] += 1
+    return {'diagnostic_version':'ssh-evidence-structure-v1', 'classifier_version':VERSION,
+            'integrity_verified':True, 'records':len(records),
+            'groups':[dict(json.loads(key), count=count) for key,count in sorted(groups.items())],
+            'privacy':'fixed structural categories and aggregate counts only; no raw text or identifiers',
+            'event_labels_assigned':False, 'training_allowed':False, 'inference_allowed':False,
+            'correlation':'unresolved; this diagnostic cannot link events to experiments'}
 
 
 def build_report(records, runs, checked, collection):
@@ -202,9 +275,17 @@ def review(collection_dir, output_dir):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--collection-dir', type=Path, required=True)
-    parser.add_argument('--output-dir', type=Path, required=True)
+    parser.add_argument('--output-dir', type=Path)
+    parser.add_argument('--diagnostics-only', action='store_true', help='Print aggregate sanitized structural diagnostics; write no reports')
     args = parser.parse_args(argv)
+    if args.diagnostics_only and args.output_dir is not None:
+        parser.error('--diagnostics-only does not accept --output-dir')
+    if not args.diagnostics_only and args.output_dir is None:
+        parser.error('--output-dir is required for a review')
     try:
+        if args.diagnostics_only:
+            print(json.dumps(verified_review(args.collection_dir, diagnostics=True), indent=2))
+            return 0
         report = review(args.collection_dir, args.output_dir)
         print(json.dumps({'review_version':VERSION, 'records':report['quality']['total_records'],
                           'training_allowed':False, 'inference_allowed':False}))

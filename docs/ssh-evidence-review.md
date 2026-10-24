@@ -112,14 +112,14 @@ changes that affect consistency cause refusal; arrange a stable capture first.
 
 ## Versioned evidence categories
 
-Review scheme `ssh-evidence-review-v1` is separate from the unchanged native
+Review scheme `ssh-evidence-review-v2` is separate from the unchanged native
 normalization adapter. It uses anchored, conservative native message rules:
 
 | Category | Evidence required |
 | --- | --- |
 | authentication_success_evidence | Explicit `Accepted publickey for … from … port … ssh2` form with valid numeric IP/port and recognized optional key fingerprint form |
 | authentication_failure_evidence | Corresponding explicit `Failed publickey` form |
-| session_open_evidence | Explicit `Starting session: command for … from … port … id …` form |
+| session_open_evidence | Explicit `Starting session: command for … from … port … id …` or the fixed lab `forced-command (config) '/bin/true'` form |
 | session_close_evidence | Explicit `Close session: user … from … port … id …` form |
 | connection_or_transport_event | Recognized listening, connection, disconnect or termination form; no authentication outcome inferred |
 | unsupported_or_ambiguous | Everything else, including incomplete, malformed, unfamiliar or untrusted-looking authentication syntax |
@@ -140,6 +140,73 @@ is copied into reports. These are implementation-based explanations, not guesses
 about private message semantics. Unsupported does not mean malicious. New parser
 support requires a separate evidence-backed change; TASK-011 never changes
 normalization or labels.
+
+## OpenSSH 10.5p1 structural diagnostics and compatibility
+
+Two implementation gaps are independently confirmed against the public
+[OpenSSH 10.5p1 log implementation](https://github.com/openssh/openssh-portable/blob/V_10_5_P1/log.c#L407),
+[sshd option handling](https://github.com/openssh/openssh-portable/blob/V_10_5_P1/sshd.c#L1370)
+and [session logging](https://github.com/openssh/openssh-portable/blob/V_10_5_P1/session.c#L635):
+
+- `-E` selects the stderr-style logging path redirected to a file. That path
+  emits CRLF. The unchanged native adapter splits on LF and deliberately keeps
+  the terminal CR in `original_message`. V1 full-match rules rejected otherwise
+  valid messages with that remnant, including authentication and listening records.
+- A configuration `ForceCommand /bin/true` changes the session log payload to
+  `Starting session: forced-command (config) '/bin/true' for …`. V1 recognized
+  only ordinary `command` sessions. This is also missing from the synthetic V1
+  fixtures; those fixtures were not representative of the configured lab session.
+
+V2 removes **one terminal CR for classification only** and adds the exact fixed
+lab forced-command form. It never strips arbitrary whitespace or accepts embedded
+CR/LF, repeated CR, arbitrary forced commands or key-option command variants.
+Raw logs, CSV fields, native event references, hashes and inventories remain
+unchanged. The adapter stays `kali-sshd-native-v1`; the changed evidence scheme
+is separately versioned as `ssh-evidence-review-v2`.
+
+These are verified source/code compatibility defects. Whether they explain all
+31 ambiguous records in the private Kali capture is not cloud-verified. No
+post-fix real evidence counts or per-experiment assignments are promised.
+Run this read-only diagnostic using the existing trusted environment and existing
+authorized evidence access (no permission changes or escalation are required by
+the tool):
+
+```bash
+.venv/bin/python -m mini_siem.evidence_review \
+  --collection-dir data/native-lab/capture-001 --diagnostics-only
+```
+
+It verifies the same complete evidence bundle before printing aggregate JSON,
+writes no report directory and changes no input files/permissions. Return only
+this JSON for compatibility investigation, never the raw capture. It includes
+no messages, accounts, addresses, fingerprints, paths, event hashes, collection
+IDs or experiment IDs. Group fields are fixed structural categories, booleans
+and counts: terminal/control-character flags, recognized prefix/forced-command
+markers, baseline V1 category, V1 single-CR probe, V2 category and mismatch reason.
+Values that do not match known grammar are never printed as token examples.
+
+`single_terminal_cr_prevents_v1_fullmatch` is emitted only when an exact
+otherwise-recognized V1 message matches after removing one terminal CR.
+`documented_config_forced_command_variant_missing_in_v1` requires the exact
+newly recognized form; a marker alone never proves a session. Other failures
+remain explicit grammar, peer-validation or unsupported-structure mismatches.
+V2 does not guess new message rules from a prefix or turn client exits into
+server evidence. Diagnostics distinguish these cases without claiming an
+unknown field's meaning. Aggregate counts can still be sensitive metadata:
+share only this deliberately sanitized output through your approved channel.
+
+Then generate a new review without overwriting any previous report:
+
+```bash
+.venv/bin/python -m mini_siem.evidence_review \
+  --collection-dir data/native-lab/capture-001 \
+  --output-dir reports/native-lab/review-compatibility-001
+.venv/bin/python -m pytest -q
+```
+
+Use a different fresh report path if that directory exists. Successful structural
+compatibility changes evidence counts only; attack labels, independent provenance,
+training/inference authorization and unresolved experiment correlation do not change.
 
 ## Interpret experiment correlation conservatively
 
@@ -184,8 +251,8 @@ and correlation findings remain pending a local run.
 
 ## Validation results
 
-Cloud checks: **393 tests passed** (366 existing and 27 new synthetic review
-tests). Dependency consistency, Python compilation and whitespace checks passed.
+Cloud checks: **421 tests passed** (all 393 previous tests plus 28 compatibility/diagnostic
+regressions; 55 evidence-review tests total). Dependency consistency, Python compilation and whitespace checks passed.
 No new dependencies or privileged operations were introduced. Real private
 Kali capture analysis remains pending.
 
