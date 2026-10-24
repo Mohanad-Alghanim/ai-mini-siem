@@ -4,8 +4,10 @@ This is an educational Isolation Forest proof of concept for a 30-record,
 IP-level SSH baseline. It detects unusual behavioral feature combinations;
 **anomaly is not verified attack classification**. No production detection
 performance is claimed. Real baseline CSVs were unavailable in the cloud during
-implementation. Real-data training, prediction counts, and validation remain
-pending; all tests use synthetic records.
+implementation. The Project Manager later recorded 27 Normal and 3 Anomaly
+predictions from the private 30-row original baseline on Kali. These are local
+observations, not detection metrics or results remeasured by this cloud audit.
+Automated fixtures are synthetic.
 
 ## Inputs and validation
 
@@ -68,24 +70,26 @@ risk levels across independently trained models. Ties may prevent an exact
 
 Commands print JSON counts of records, Normal, and Anomaly without printing IPs
 or individual rows. Prediction exports contain IPs and are sensitive local data.
-No real prediction counts can be reported until the real CSV is run.
+The previously recorded local prediction counts are observations; rerun counts
+depend on the actual approved artifact/input and must not be hardcoded.
 
 ## Exact Kali Linux commands
 
-From an existing repository checkout (or clone it first), use Python 3.10+:
+Use reviewed main and the existing virtual environment. This section documents
+the historical TASK-003 API, including its original training example; it is not
+an instruction to retrain the accepted demonstration model. For current operation,
+use the [final demonstration workflow](final-demonstration.md).
 
 ```bash
-git fetch origin
-git switch task-003-ssh-anomaly-model
-python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
 Keep your original CSV privately at, for example,
-`$HOME/siem-private/ssh/ssh_baseline_features.csv`. Train and save the model,
-optionally exporting **training-set** predictions:
+`$HOME/siem-private/ssh/ssh_baseline_features.csv`. The following is the
+**historical training API reference only**, with example paths. A separately
+authorized reproducibility experiment may train a distinct artifact; do not
+run it to replace the existing demonstration model or bypass a version error:
 
 ```bash
 python -m mini_siem.ml train \
@@ -106,8 +110,10 @@ python -m mini_siem.ml predict \
   --output reports/ssh-reloaded-predictions.json
 ```
 
-For new feature records, change `--input` to their CSV path. All six input
-columns and the same feature definitions/aggregation window must be available.
+Do not substitute newly extracted historical/native records. The generic API
+checks numeric/schema validity, not historical provenance. Current demonstration
+inference is limited to the confirmed original training baseline; any broader
+reuse needs independently demonstrated semantic/window compatibility.
 Change `--output` to a fresh path ending in `.csv` or `.json` to select format.
 The training `--output` option is optional; counts are printed regardless.
 Parent directories are created automatically. CLI outputs must not already
@@ -120,8 +126,9 @@ output errors. CLI errors do not echo source record values.
 
 Joblib is explicitly declared in requirements.txt. The artifact stores the
 pipeline, feature schema version and Scikit-learn version. Reload rejects
-unsupported artifact schemas or different Scikit-learn versions; recreate the
-model in a matching environment. Dependency ranges are not an exact lockfile.
+unsupported artifact schemas or different Scikit-learn versions. Restore the
+trusted original matching environment; do not recreate or retrain the model
+just to make the demonstration run. Dependency ranges are not an exact lockfile.
 Reproducibility is tested for the same seed, data order, and installed versions;
 identical results across dependency upgrades are not promised.
 
@@ -159,7 +166,9 @@ Existing prediction files are unverified model outputs. No accuracy, precision,
 recall, or F1 is calculated against them. Agreement with previous predictions
 would only measure agreement; this task does not perform that optional comparison.
 Synthetic tests establish software behavior, not real intrusion detection quality.
-This task adds no dashboard, monitoring loop, or alert management.
+TASK-003 itself added no dashboard, monitoring loop or alert management. Later
+merged tasks supply the dashboard and stored anomaly alerts; live monitoring
+is still outside scope.
 
 ## Implementation validation
 

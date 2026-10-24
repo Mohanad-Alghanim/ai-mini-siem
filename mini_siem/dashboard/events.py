@@ -8,6 +8,7 @@ import pandas as pd
 from mini_siem.dashboard.queries import DashboardDataError, readonly_database
 from mini_siem.evidence_review import CLASSES, VERSION
 from mini_siem.feature_contract import read_contract as read_json
+from mini_siem.storage.ssh_events import verify_extension
 
 
 def historical_events(database, batch=None, source_ip=None):
@@ -18,10 +19,16 @@ def historical_events(database, batch=None, source_ip=None):
         clauses.append('instr(COALESCE(source_ip,\'\'), ?) > 0'); values.append(source_ip)
     where = ' WHERE '+' AND '.join(clauses) if clauses else ''
     with readonly_database(database) as connection:
+        has_details = connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ssh_event_details'").fetchone()
+        if has_details:
+            verify_extension(connection)
+            if connection.execute("SELECT 1 FROM ssh_event_details GROUP BY event_id HAVING COUNT(*) > 1 LIMIT 1").fetchone():
+                raise ValueError('Duplicate event details')
+        status = "(SELECT parse_status FROM ssh_event_details d WHERE d.event_id=security_events.event_id)" if has_details else "NULL"
         return pd.read_sql_query("""SELECT event_id AS 'Event ID',batch_id AS 'Batch ID',
             source_record AS 'Source Record',source_ip AS SourceIP,event_type AS 'Event Type',
-            occurred_at AS 'Original Event Timestamp',ingested_at_utc AS 'Ingested (UTC)'
-            FROM security_events"""+where+' ORDER BY event_id',connection,params=values)
+            occurred_at AS 'Original Event Timestamp',ingested_at_utc AS 'Ingested (UTC)',
+            """+status+" AS 'Event Status' FROM security_events"+where+' ORDER BY event_id',connection,params=values)
 
 
 def lab_review(path):

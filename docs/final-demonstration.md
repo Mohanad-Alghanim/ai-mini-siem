@@ -1,5 +1,11 @@
 # Final graduation demonstration: AI-Powered Mini SIEM
 
+PR #13 merged TASK-011 and the earlier integration into main at 80e4a5e.
+This guide now incorporates the local TASK-012 dashboard and PR #14 documentation
+on task-012-dashboard-simplification. The consolidation is uncommitted and
+unpublished; do not switch away or assume main contains this UI. No new tests
+were run on the combined state.
+
 This is a local educational proof of concept: offline SSH behavioral anomaly
 inference, SQLite predictions/alerts, historical event inspection, a native
 loopback SSH lab and separate evidence review. It is **not real-time AI intrusion
@@ -46,16 +52,17 @@ There is no override for new extracted features and no retraining in this workfl
 
 ## Install / select the environment
 
-From your existing repository on Kali, after reviewing the final branch:
+Use the preserved, reviewed working checkout on task-012-dashboard-simplification.
+Do not switch branches or pull over its uncommitted tracked/untracked files:
 
 ```bash
-git fetch origin
-git switch final-sprint-mini-siem
+cd ~/ai-mini-siem
 source .venv/bin/activate
-python -c 'import sys, sklearn, streamlit; print(sys.executable); print(sklearn.__version__, streamlit.__version__)'
-python -m pip check
-python -m pytest -q
 ```
+
+The existing test/import/dependency evidence is recorded below, not rerun during
+consolidation. No commits, remote publication or main merge are authorized by
+these operating instructions.
 
 Reuse the existing working virtual environment; do not upgrade it casually.
 For a new installation only, use `python3 -m venv .venv`, activate it and
@@ -181,28 +188,35 @@ proof. Training and inference remain disabled **for all this native evidence**.
 As the normal dashboard user, from the repository root:
 
 ```bash
-python -m streamlit run mini_siem/dashboard/app.py --server.address 127.0.0.1 --server.port 8501
+python -m streamlit run mini_siem/dashboard/app.py --server.address 127.0.0.1 --server.port 8501 --browser.gatherUsageStats false
 ```
 
 Open `http://127.0.0.1:8501` in the Kali browser. Configuration disables usage
 telemetry. There is no authentication: keep the service local. In presentation
 order:
 
-1. **Overview:** show live database-derived Normal/Anomaly, alert, batch and event
-   counts and score charts. State that anomalies are unusual behavior, not attacks.
+1. **Overview:** show current database-derived Normal/Anomaly, alert and event
+   counts and display-priority charts. State that anomalies are unusual behavior,
+   not attacks.
 2. **Security Events → Stored historical events:** show actual stored event
-   metadata; filter batch or SourceIP. Explain missing original timestamp/year.
-3. **Predictions:** select Normal and Anomaly, then batch/model filters. Show
-   SourceIP, score and processing timestamp; lower scores are more unusual.
-4. **Alerts:** show anomaly-triggered alerts and matching batch/model identifiers.
+   metadata; filter event type, available status, Source IP or UTC date. Explain
+   missing original timestamp/year.
+3. **Predictions:** select Normal or Anomaly, Risk Level, Source IP and UTC date.
+   Show the formatted processing timestamp and explain that risk bins are
+   presentation priorities, not attack probabilities.
+4. **Alerts:** show Unusual SSH Authentication Behavior alerts; filter by
+   name, Source IP, Risk Level and UTC creation date. Internal identifiers are
+   hidden.
    On the fresh demo database, alert count equals anomaly count; historical
    multi-model databases may contain more than one observation per IP.
-5. **Security Events → Native SSH lab evidence:** select the sanitized V2 report.
-   Show counts, event references and server evidence categories, separately from
+5. **Security Events → Native SSH evidence:** use the operator-configured
+   sanitized V2 report; filter available evidence categories.
+   Show counts and server evidence categories, separately from
    AI prediction/alert tables. Explain that none of these native events triggered
    the legacy model, and no event-to-experiment assignment is verified.
-6. **Data Sources / System Information:** show provenance, offline scope and
-   score conventions. Use **Refresh** after a separate process changes stored
+6. **Overview → How to interpret these results:** explain offline scope,
+   Unknown event times and the explicitly uncalibrated risk-level mapping.
+   Use **Refresh** after a separate process changes stored
    data or regenerates an authorized report; there is no live polling/inference.
 
 Do not put raw messages, credentials, private paths or IP-level exports on public
@@ -265,9 +279,9 @@ does not fabricate success or silently add risky simulations/services.
 
 ## Single final Kali acceptance checklist
 
-- [ ] Review `final-sprint-mini-siem` (includes TASK-011); keep PRs unmerged until approval.
+- [ ] Use the preserved local delivery checkout; recognize that TASK-012 and this consolidation are not committed or published.
 - [ ] Confirm branch, clean/preserved Git changes, tracked pytest.ini and existing venv imports.
-- [ ] Run full pytest and pip check; retain actual results privately.
+- [ ] Record existing validation evidence: 427 earlier full-suite passes, 51 TASK-012 focused passes and one event-ID recheck. No combined test run is claimed or authorized here.
 - [ ] Select existing DB (A) or confirm original training assets and build a fresh DB (B).
 - [ ] Check actual database counts; historical events are visible and original files unchanged.
 - [ ] If B is used, confirm Normal + Anomaly = baseline records and alerts = Anomaly.
@@ -278,11 +292,11 @@ does not fabricate success or silently add risky simulations/services.
 - [ ] If live scenarios are shown, verify loopback PID/address, limits, normal controls and failure evidence.
 - [ ] Stop/clean up only the newly created lab; verify existing SSH config/service and original capture unchanged.
 - [ ] State unsupported attack categories, 30-row training replay, unverified labels/time/correlation and no independent evaluation.
-- [ ] Stop the dashboard. Do not merge or start additional work without approval.
+- [ ] Stop the dashboard and preserve the private acceptance record.
 
-## Automated validation
+## Existing validation evidence (not rerun)
 
-Cloud result: **427 tests passed**, including all 421 existing tests and six
+Before TASK-012, the cloud result was: **427 tests passed**, including all 421 existing tests and six
 focused integration/failure cases. Tests exercise original-baseline inference
 without fitting, event persistence, prediction/alert consistency, all dashboard
 pages, sanitized native evidence, filters, failure cleanup and no overwrite.
@@ -290,12 +304,20 @@ Python compilation, dependency consistency, whitespace checks and an actual
 loopback Streamlit HTTP health check also passed. No new Python dependencies
 were added.
 
+TASK-012 subsequently passed 51 focused tests and one event-identifier recheck,
+using synthetic data. The combined documentation/implementation has not been
+executed, regression-tested or independently revalidated. Do not present the
+old counts as a test result for this state. No additional tests were run.
+
 ## Remaining blockers and validation boundary
 
 Cloud tests use synthetic fixtures, including a temporary synthetic test model;
-no private dataset/artifact is bundled or trained for presentation. Real Kali
-capture, original model/CSV pairing, runtime compatibility, actual model counts,
-privileged lab behavior and browser acceptance require the checklist above.
+no private dataset/artifact is bundled or trained for presentation. The recorded Kali evidence includes the existing 27 Normal / 3 Anomaly /
+3 alert observation and native capture integrity review with 39 records, four
+scenarios and six attempts. These are externally supplied local observations,
+not cloud measurements or universal expected values. V2 private category counts,
+original model/CSV pairing on a new installation, exact runtime compatibility
+and a new browser/service-safety acceptance run require the checklist above.
 An unavailable/mismatched model environment or unverifiable baseline pairing
 blocks new inference, not inspection of previously stored predictions. Missing
 authorized report access blocks the native-evidence panel, not the rest of the UI.

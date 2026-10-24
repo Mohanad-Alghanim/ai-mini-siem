@@ -31,3 +31,12 @@ def processing_counts(dates):
                     title="Predictions by processing date (UTC)", color_discrete_sequence=["#68a8ff"])
     figure.update_xaxes(type="category")
     return figure
+
+
+def risk_distribution(records):
+    """Count display priorities without exposing model IDs or numerical scores."""
+    order = ['High', 'Medium', 'Low']
+    counts = records['Risk Level'].value_counts().reindex(order, fill_value=0)
+    return px.bar(x=order, y=counts.values, labels={'x':'Risk Level', 'y':'Records'},
+                  color=order, color_discrete_map={'High':'#ff6b75','Medium':'#ffcb6b','Low':'#35c9a5'},
+                  title='Prediction review priority')

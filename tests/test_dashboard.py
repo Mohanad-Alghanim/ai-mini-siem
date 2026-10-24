@@ -171,14 +171,19 @@ def test_app_overview_navigation_and_filters(database, monkeypatch):
     app.sidebar.radio[0].set_value("Alerts").run()
     assert not app.exception
     assert len(app.dataframe[0].value) == 2
-    app.selectbox(key="alerts-batch").set_value("batch-a").run()
+    app.selectbox(key="alerts-risk").set_value("High").run()
     assert len(app.dataframe[0].value) == 1
+    assert app.dataframe[0].value.iloc[0]['Source IP'] == '192.0.2.3'
     app.sidebar.radio[0].set_value("Predictions").run()
     app.selectbox(key="predictions-status").set_value("Normal").run()
     assert not app.exception
     assert len(app.dataframe[0].value) == 2
-    app.sidebar.radio[0].set_value("Data Sources / System Information").run()
+    app.sidebar.radio[0].set_value("Security Events").run()
     assert not app.exception
+    assert list(app.sidebar.radio[0].options) == ['Overview','Security Events','Alerts','Predictions']
+    assert not app.sidebar.text_input
+    for widget in app.selectbox:
+        assert 'batch' not in widget.label.lower() and 'model' not in widget.label.lower()
 
 
 def test_app_refresh_rereads_database(database, monkeypatch):

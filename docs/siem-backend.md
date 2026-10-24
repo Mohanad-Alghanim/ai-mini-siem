@@ -8,14 +8,14 @@ verified attack. No detection accuracy is claimed.
 
 ## Kali Linux commands
 
-From the repository root, using your existing trusted TASK-003 model artifact:
+From reviewed main and the repository root, using your existing venv and trusted
+TASK-003 model artifact. Paths below are examples, not shipped private files.
+Use only the confirmed original baseline; schema validation alone does not prove
+new-feature compatibility. The guarded [final preparation workflow](final-demonstration.md)
+is preferred for a fresh presentation database:
 
 ```bash
-git fetch origin
-git switch task-004-siem-backend
-python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 python -m pytest -q
 
 python -m mini_siem.backend init --database data/mini-siem.db
@@ -39,7 +39,8 @@ Statistics count all stored versions and batches, not unique people or attacks.
 CLI output contains counts and batch/model identifiers, not IPs or raw messages.
 Do not put sensitive information in a batch ID.
 
-Use a new batch ID for a new source batch. Reusing an existing ID for different
+Use a new batch ID for a new compatible source batch. A new ID does not establish
+feature compatibility or approve newly extracted historical/native inputs. Reusing an existing ID for different
 CSV bytes is rejected without database changes. Choose a new path to create a
 separate database. `init` is repeatable on a supported initialized database;
 ingestion and statistics require initialization and never silently create a
@@ -49,8 +50,9 @@ Parent directories are created by `init`. If failed initialization leaves an
 empty file, preserve it and choose a fresh database path for the next attempt.
 
 All paths are configurable. There is no new dependency; SQLite is in the Python
-standard library. Kali VM execution and real-data ingestion remain pending in
-the cloud: no real CSV or trained local artifact was available. Do not run a
+standard library. The recorded Kali backend observation is 30 predictions
+(27 Normal, 3 Anomaly) and 3 alerts. No private CSV/model/database is available
+for independent repetition in this cloud documentation audit. Do not run a
 training command just to use this backend; supply your already-created model.
 Synthetic tests create their own small model fixtures solely for testing.
 
@@ -67,12 +69,12 @@ framework in this proof of concept; unsupported versions are rejected.
 | Table | Purpose and key fields |
 | --- | --- |
 | ingestion_batches | batch_id primary key, source_sha256, record_count, created_at_utc |
-| security_events | Reserved for future normalized event ingestion: event_id, batch_id foreign key, source_record, nullable source_ip/event_type/occurred_at, ingested_at_utc |
+| security_events | Historical normalized event metadata (populated by TASK-006, not feature ingestion): event_id, batch_id foreign key, source_record, nullable source_ip/event_type/occurred_at, ingested_at_utc |
 | predictions | prediction_id, batch_id foreign key, model_id, source_record, source_ip, anomaly_label/status/score, score_convention, processed_at_utc |
 | alerts | alert_id, unique prediction_id foreign key, alert_type, created_at_utc |
 
 `security_events` remains empty during feature ingestion. Feature rows are
-aggregates, not original events. The reserved `occurred_at` field stays NULL when
+aggregates, not original events. The `occurred_at` field stays NULL when
 no original timestamp is available; no year, event time, or aggregation window
 is invented. All newly generated processing timestamps are timezone-aware UTC
 ISO 8601 strings ending in `+00:00`. These are processing times, not original log
@@ -156,8 +158,9 @@ SQLite sidecar files, original datasets, model artifacts, and outputs local;
 existing Git ignore rules cover databases, `data/`, `models/`, and `reports/`.
 Do not force-add them. Copy a live SQLite database using SQLite's backup tools
 rather than copying only the main file during writes. No retention policy,
-alert acknowledgement workflow, remote notification, authentication, dashboard,
-or live log ingestion is included. SQLite here is a small local proof of concept.
+alert acknowledgement workflow, remote notification or authentication is
+included in this backend. The separately implemented dashboard is read-only;
+live log monitoring/inference is not implemented. SQLite here is a small local proof of concept.
 
 Model thresholds and a small baseline do not establish attack classification or
 real-world detection accuracy. Tests use synthetic data and verify persistence,
@@ -166,7 +169,7 @@ validation, trust, and transaction rollback. No real-data results are invented.
 
 ## Validation evidence
 
-On Python 3.12 in the cloud, the full suite passed **123 tests** (93 existing and
+At TASK-004, on Python 3.12 in the cloud, the suite passed **123 tests** (93 existing and
 30 backend tests). Dependency and Git whitespace checks passed. A separate CLI
 run using an already-created synthetic test model stored 30 predictions
 (27 Normal, 3 Anomaly), created 3 alerts, and retained zero raw security events.
