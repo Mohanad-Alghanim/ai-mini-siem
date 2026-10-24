@@ -5,20 +5,18 @@ profiles data quality, inspects SSH authentication indicators, and compares
 IP-level records. It does not train a model, repair data, or verify previous
 predictions as ground truth. No real datasets were available during development;
 all automated fixtures are synthetic and generated in temporary directories.
-Real-data analysis remains pending.
+The Project Manager subsequently reported validation of all four private CSVs
+on Kali. This guide does not redistribute those files or independently repeat
+that local review; configure the actual schema when inspecting another copy.
 
 ## Kali Linux commands
 
 Use the repository root and the TASK-001 Python virtual environment. Python 3.10+
-is required; automated validation was performed on Python 3.12 in the cloud,
-not directly in a Kali VM.
+is required by the project guidance; cloud tests use Python 3.12. Reuse the
+existing venv; see the README for first-time installation.
 
 ```bash
-git fetch origin
-git switch task-002-dataset-analysis
-python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
@@ -40,8 +38,9 @@ python -m mini_siem.analysis \
   --output-dir reports/ssh-initial
 ```
 
-A nonzero exit code of **1 is expected** here because complete real schemas have
-not been confirmed. This still writes both reports. Inspect `summary.json` for
+A nonzero exit code of **1 is expected** when the shipped provisional contract
+has not been completed for your actual files. This still writes both reports.
+Inspect `summary.json` for
 actual column names, missing values, and quality findings. No columns are created,
 renamed, or guessed. Unknown columns are profiled for missing/distinct values;
 no unconfirmed type or numerical range is assigned to them.

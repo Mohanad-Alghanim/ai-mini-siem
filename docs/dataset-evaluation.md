@@ -1,5 +1,10 @@
 # TASK-009: Independent split planning and evaluation methodology
 
+This TASK-009 methodology is a planning reference, not an instruction to start
+new experiments. The later [native SSH lab](kali-native-ssh-lab.md) supplies
+restricted controlled evidence, not independently labeled attack/evaluation
+data. The accepted demonstration remains offline SSH inference.
+
 ## Planning policy
 
 A split plan is a reproducible metadata artifact, not a trained model, evaluation

@@ -1,136 +1,122 @@
-# TASK-005: Local Streamlit Mini SIEM dashboard
+# Local Streamlit dashboard
 
-The dashboard reads the existing TASK-004 SQLite backend. It never ingests data,
-loads an AI artifact, trains a model, or writes predictions/alerts. No demonstration
-data is generated in the application. Temporary synthetic records exist only in
-automated tests.
+The dashboard reads an initialized local SQLite database and, optionally, a
+sanitized V2 native SSH review. It never loads a model artifact, fits a model,
+runs predictions, ingests events or writes alerts. TASK-005 introduced the base
+screens; merged PR #13 added Security Events and separate native evidence.
 
-## Kali Linux launch commands
+## Start, stop and restart on Kali
 
-Run from the repository root using Python 3.10+ and your existing database:
+Use reviewed main and the existing working environment:
 
 ```bash
-git fetch origin
-git switch task-005-streamlit-dashboard
-python3 -m venv .venv
+cd ~/ai-mini-siem
 source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m pytest -q
-
-MINI_SIEM_DATABASE="$PWD/data/mini-siem.db" \
-  python -m streamlit run mini_siem/dashboard/app.py \
+export MINI_SIEM_DATABASE="$PWD/data/mini-siem.db"
+python -m streamlit run mini_siem/dashboard/app.py \
   --server.address 127.0.0.1 \
   --server.port 8501 \
   --browser.gatherUsageStats false
 ```
 
-Open the localhost address printed by Streamlit in the Kali VM's browser.
-Stop with Ctrl+C. The checked-in `.streamlit/config.toml` also binds to localhost,
-disables usage telemetry, and supplies the dark SOC-inspired theme. There are no
-external APIs, integrations, or application telemetry. Streamlit and Plotly were
-already dependencies; no new dependency or SQLite migration is needed.
+Open http://127.0.0.1:8501 in Kali. Stop with Ctrl+C; restart using the same block
+in a new terminal. Data is not deleted. `.streamlit/config.toml` also binds to
+localhost, disables usage telemetry and sets the existing dark theme.
+No external API or authentication service is used. Do not expose the UI publicly.
 
-The optional `MINI_SIEM_DATABASE` environment variable selects the initial path.
-Without it the default is `data/mini-siem.db`, relative to the launch directory.
-You can change the masked database path field in the sidebar. It is only a local
-configuration field, not authentication. The application does not show paths in
-error messages. Existing database files are required: missing, malformed, empty
-uninitialized files, or incompatible schemas produce a safe message rather than
-creating a database or printing SQL exception traces.
+The local database is not in Git. For a new machine, follow
+[first-time installation](../README.md#first-time-installation-on-another-kali-machine)
+and explicitly initialize an empty database or obtain an approved project-owned
+backup. A fresh clone has no populated demonstration database. Reuse the venv;
+do not recreate/upgrade it merely to view the dashboard.
 
-To inspect counts separately, use the unchanged TASK-004 command:
+The masked SQLite path field in the sidebar selects another existing database;
+it is not authentication. Missing, malformed, empty-uninitialized or incompatible
+databases produce a safe error instead of being silently created. The default
+path is data/mini-siem.db relative to the repository-root launch directory.
 
 ```bash
 python -m mini_siem.backend stats --database data/mini-siem.db
 ```
 
-The locally reported expected values (30 predictions, 27 Normal, 3 Anomaly,
-3 alerts, 1 batch and 0 raw events) are validation references from the project,
-**not hardcoded dashboard values**. Actual displayed counts always come from SQL.
-No real database was available in the cloud, so confirming those values on your
-Kali database remains pending.
+The Project Manager previously recorded 30 predictions (27 Normal, 3 Anomaly)
+and 3 alerts. An earlier feature-only database had 0 raw events; later historical
+ingestion recorded 2,000 events. These are observations at particular stages,
+not simultaneous universal expectations or hardcoded values. Counts always
+come from the selected database; this audit does not read the private Kali DB.
 
-## Pages and interactions
+## Screens and filters
 
-- **Overview:** six global KPI cards, Normal/Anomaly distribution, alerts grouped
-  by batch and model, score histogram, and UTC processing-date counts.
-- **Alerts:** stored alerts joined to predictions, including ID, SourceIP, alert
-  type, score, model, batch, processing time and alert creation time. Filter by
-  batch/model or use literal SourceIP substring search.
-- **Predictions:** stored SourceIP, status, score, batch, model and processing
-  timestamp, with Normal/Anomaly, batch/model and SourceIP filters.
-- **Data Sources / System Information:** database/table semantics, model identity,
-  score conventions, processing-time meaning, and privacy/scientific limitations.
+| Screen | Contents and controls |
+| --- | --- |
+| Overview | Six SQL-derived KPIs; Normal/Anomaly distribution; alerts grouped by batch/model; per-model scores and UTC processing-day counts |
+| Security Events: stored historical events | Metadata only: event/batch/source record, SourceIP, type and available timestamps; exact batch filter and literal IP substring search |
+| Security Events: native SSH lab evidence | Selected sanitized V2 review.json; record/source coverage, evidence-category counts, event references and unresolved-correlation warning |
+| Predictions | SourceIP, status, score, batch, model and processing time; Normal/Anomaly, batch/model and literal IP filters |
+| Alerts | Joined alert/prediction data with IP, score, batch/model and creation/processing time; batch/model/IP filters |
+| Data Sources / System Information | Source separation, score conventions, offline scope, timestamp and model/privacy limitations |
 
-The overview always describes **all stored batches/model versions**; table filters
-affect the selected operational table only. Charts and KPIs are not prediction
-accuracy metrics. Scores are shown for one selected model artifact at a time;
-independently trained artifacts can have different scales and thresholds.
-The zero reference line follows the stored TASK-003 decision_function convention:
-negative = Anomaly, zero or above = Normal. Scores are not attack probabilities.
+Overview KPIs describe all stored batches/model versions; table filters do not
+change them. Counts represent observations, not unique IPs, incidents or attacks.
+The score chart selects one model artifact at a time because independent models
+can have different scales. `decision_function < 0` is Anomaly; zero or above is
+Normal. Scores are not attack probabilities. No accuracy, precision, recall or
+F1 is shown without independent labeled ground truth.
 
-**Refresh** reruns the page and reads a new database snapshot. Widget interactions
-also rerun the page. Nothing automatically ingests backend data and there is no
-automatic polling. There is no cache of database results. Use the separate backend
-CLI to add data, then refresh. Each query snapshot uses one read transaction so
-its own cards/charts/tables share a consistent database view. On a filter page,
-options are read before the selected filtered snapshot; a simultaneous backend
-update may appear after the next refresh.
+Refresh and widget interactions reread the database/report. There is no polling,
+continuous ingestion or automatic model execution. Each query snapshot uses a
+read transaction; a concurrent backend update may appear on the next refresh.
+Timezone-aware processing times support UTC counts. Invalid/ambiguous timestamps
+are skipped and reported; missing original years/timezones are not invented.
+A single processing day is not a historical trend. Zero stored raw events does
+not mean no SSH activity occurred.
 
-Timezone-aware stored ISO processing timestamps are converted to UTC for day
-counts. Invalid or timezone-ambiguous timestamps are skipped with a visible
-count; no date, year or timezone is invented. The chart uses bars rather than an
-interpolated time series. A single recorded day is explicitly identified as
-insufficient for a historical trend. Processing dates are not original event
-dates. Missing raw events mean none are stored, not that no SSH activity occurred.
+## Native evidence report
 
-## Query and privacy safeguards
+After an authorized analyst has generated a V2 review and arranged a protected
+report-only handoff, select its actual readable path:
 
-`mini_siem/dashboard/queries.py` opens SQLite with URI `mode=ro` and enables
-`PRAGMA query_only`. It reuses TASK-004 schema-version checking and additionally
-checks required columns, integrity, foreign keys, classification/score state,
-and duplicate/dangling join identities. Unsupported/malformed state is rejected
-with a generic safe error. It does not initialize, migrate or repair databases.
-All filter values use SQL bound parameters; only fixed program table/column
-names are interpolated. SourceIP search treats SQL metacharacters literally.
+```bash
+export MINI_SIEM_LAB_REVIEW="$PWD/reports/dashboard-evidence/review.json"
+```
 
-`mini_siem/dashboard/charts.py` creates Plotly figures from the query results.
-`mini_siem/dashboard/app.py` renders the pages and handles safe data errors.
-The existing backend and AI prediction code remain unchanged.
+Set the variable before launching, or use the masked field in Security Events.
+This is an operator-prepared example path, not a shipped file. The dashboard
+checks the report's version, counts, references and disabled model/label flags;
+it does **not** reverify the root-private capture or independently authenticate
+the report. It displays selected sanitized fields only, not arbitrary raw strings.
 
-IPs appear only in operational alert/prediction tables. No raw log contents are
-queried, printed or displayed. The system-information page and global charts do
-not show IP values. Database files, model artifacts, datasets and private reports
-must remain local and ignored by Git. Tables can be exported by the browser UI;
-handle any exports as sensitive data and keep them outside version control.
+Follow the [native evidence handoff](final-demonstration.md#prepare-native-evidence-without-exposing-the-capture).
+Never chmod/chown the original capture or start Streamlit as root. Missing report
+access does not block the database screens. Native event counts are separate
+from database event/prediction KPIs. No native record triggers the legacy model.
 
-**Use Streamlit locally only. Do not expose the server publicly without
-appropriate authentication and additional security controls.** There is no
-application authentication in TASK-005. A local browser interface does not make
-the stored records nonsensitive.
+## Read-only and privacy safeguards
 
-## Limits and validation
+`mini_siem/dashboard/queries.py` opens SQLite with URI mode=ro and query_only,
+checks schema/integrity/relationships and validates prediction/score state.
+`events.py` uses the same read-only connection for historical metadata and
+validates the selected offline evidence report. Filter values are SQL bound
+parameters; literal IP searches do not treat SQL metacharacters as wildcards.
+The app never initializes, migrates or repairs a database. Error text omits SQL,
+private paths and stored values.
 
-The model is a 30-record educational proof of concept. Anomaly means unusual
-behavior, not a confirmed attack. No accuracy, precision, recall or F1 is shown
-without independent labeled ground truth. Counts include separate model/batch
-histories, not unique IPs, attacks or incidents. Alert grouping is a summary of
-stored alerts, not risk severity. No dashboard inference, real-time log ingestion,
-alert modification or additional ML model is implemented.
+IPs appear only in operational historical/prediction/alert tables. Raw message
+content is not queried or displayed. Keep databases, backups, sidecars, models,
+reports and any browser table exports private and outside Git. A localhost UI
+still contains sensitive data and supplies no application authentication.
 
-The current query layer reads the small database in memory and runs integrity
-checks on refresh; very large histories would need pagination and more targeted
-queries. SQLite read contention/timeouts are handled with the same safe unavailable
-message. The existing database's permissions and journal files must permit normal
-SQLite read-only access. Unit and Streamlit AppTest checks use initialized temporary
-SQLite databases and synthetic records; those tests do not establish real-data
-correctness or detection accuracy.
+## Validation and limits
 
-Validation in the cloud (Python 3.12): **153 tests passed** (123 existing and 30
-dashboard tests). Coverage includes SQL KPIs/counts, joins, bound filters, empty
-and malformed databases, read-only rejection of writes, unchanged database
-bytes, timestamp handling, Plotly figures, Streamlit navigation/filtering, and
-manual refresh. Dependency and Git whitespace checks passed. A separate local
-Streamlit startup/health/HTTP check passed using a synthetic database, whose
-bytes remained unchanged. The server was stopped and temporary startup files
-removed. No real database values or real-data dashboard validation are claimed.
+At TASK-005, 153 cloud tests passed, including 30 initial dashboard tests. The
+consolidated implementation later passed 427 tests with Streamlit AppTest coverage
+of all pages, filters and Refresh, and a loopback HTTP health check. Fixtures are
+synthetic, not evidence of attack-detection accuracy. Recorded local Kali figures
+are attributed above; private browser/service checks are not independently
+repeated by this documentation audit.
+
+The model is a 30-record proof of concept with legacy feature-provenance limits.
+Historical prediction replay is offline and does not validate performance on
+unseen hosts, time periods or attack types. Native correlation remains unresolved.
+The small query layer reads histories into memory; production-scale pagination,
+authentication, remote alerts and continuous monitoring are outside this scope.

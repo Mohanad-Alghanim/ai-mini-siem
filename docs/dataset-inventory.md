@@ -70,11 +70,7 @@ only nonnullable rules/record identifiers make blanks a quality finding.
 From the repository root with Python 3.10+:
 
 ```bash
-git fetch origin
-git switch task-009-dataset-evaluation
-python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
 python -m pytest -q
 
 python -m mini_siem.datasets draft \
@@ -183,5 +179,8 @@ output protection. Existing AI/backend/dashboard tests remain passing.
 A separate CLI check used only temporary synthetic manifests: an explicitly
 assigned verified-time plan was generated, a shared collection group was rejected,
 and training/inference stayed false. Temporary manifests/plans were removed.
-Real-data inventory/provenance validation remains pending. No private manifests,
-logs, plans, reports, models or databases are committed.
+The later [native lab](kali-native-ssh-lab.md) generates private inventory drafts;
+[evidence review](ssh-evidence-review.md) verifies their consistency with the
+supplied capture. That does not certify independent provenance, trusted labels
+or evaluation readiness. No private manifests, logs, plans, reports, models or
+databases are committed.
